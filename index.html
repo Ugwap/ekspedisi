@@ -487,7 +487,7 @@
       return (
         typeof APPS_SCRIPT_URL === "string" &&
         APPS_SCRIPT_URL.startsWith("https://script.google.com/macros/s/") &&
-        !APPS_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbzMGFCxAuwq7_E2JYeosMkboCxPgjjRB87J-pqsa6FV1ODRiHjF5-KdpdE1o9d5kF0WKw/exec")
+        APPS_SCRIPT_URL.endsWith("/exec")
       );
     }
 
