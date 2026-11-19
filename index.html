@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rekap Pengiriman Barang</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #0f766e;
+      --primary-hover: #115e59;
+      --excel: #15803d;
+      --pdf: #dc2626;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.45rem;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 5px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-cancel {
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .btn-excel {
+      background: var(--excel);
+      color: #fff;
+    }
+
+    .btn-pdf {
+      background: var(--pdf);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+
+    .btn-edit {
+      background: #fef3c7;
+      color: var(--warn);
+      padding: 5px 9px;
+      font-size: 0.78rem;
+      margin-right: 4px;
+    }
+
+    .btn-del {
+      background: #fee2e2;
+      color: var(--danger);
+      padding: 5px 9px;
+      font-size: 0.78rem;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .search-box {
+      min-width: 240px;
+      flex: 1;
+      max-width: 340px;
+      padding: 8px 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+
+    .search-box:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.89rem;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    tfoot td {
+      background: #f8fafc;
+      font-weight: 700;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 12px;
+    }
+
+    .meta {
+      font-size: 0.86rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Rekap Pengiriman Barang</h1>
+      <p class="subtitle">Penyimpanan lokal browser • Tanpa database</p>
+    </div>
+
+    <div class="card">
+      <form id="pengirimanForm" class="form-grid">
+        <input type="hidden" id="editIndex" value="" />
+
+        <div class="form-group">
+          <label for="namaToko">Nama Toko</label>
+          <input type="text" id="namaToko" placeholder="Nama toko" required />
+        </div>
+
+        <div class="form-group">
+          <label for="tanggalPengiriman">Tanggal Pengiriman</label>
+          <input type="date" id="tanggalPengiriman" required />
+        </div>
+
+        <div class="form-group">
+          <label for="noSuratJalan">No Surat Jalan</label>
+          <input type="text" id="noSuratJalan" placeholder="Nomor surat jalan" required />
+        </div>
+
+        <div class="form-group">
+          <label for="jumlahKoli">Jumlah Koli</label>
+          <input type="number" id="jumlahKoli" min="1" step="1" placeholder="0" required />
+        </div>
+
+        <div class="form-group">
+          <label for="noResi">No Resi</label>
+          <input type="text" id="noResi" placeholder="Nomor resi" required />
+        </div>
+
+        <div class="form-group form-actions">
+          <button type="submit" class="btn-primary" id="submitBtn">+ Simpan</button>
+          <button type="button" class="btn-cancel" id="cancelEditBtn" style="display: none;">Batal</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="meta" id="summaryBar">Menampilkan 0 data • Total Koli: 0</div>
+
+      <div class="toolbar">
+        <input
+          type="search"
+          id="searchInput"
+          class="search-box"
+          placeholder="Cari nama toko, no surat jalan, atau no resi..."
+        />
+        <div class="btn-group">
+          <button type="button" class="btn-excel" id="exportExcelBtn">Export Excel (.xlsx)</button>
+          <button type="button" class="btn-pdf" id="exportPdfBtn">Export PDF</button>
+          <button type="button" class="btn-danger" id="clearAllBtn">Reset Semua</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Nama Toko</th>
+              <th>Tanggal Pengiriman</th>
+              <th>No Surat Jalan</th>
+              <th>Jumlah Koli</th>
+              <th>No Resi</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="7" class="empty">Belum ada data pengiriman.</td>
+            </tr>
+          </tbody>
+          <tfoot id="tableFoot" style="display: none;">
+            <tr>
+              <td colspan="4" style="text-align: right;">Total Koli</td>
+              <td id="totalKoliCell">0</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "rekap_pengiriman_tanpa_db_v1";
+    let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+
+    const form = document.getElementById("pengirimanForm");
+    const editIndexInput = document.getElementById("editIndex");
+    const submitBtn = document.getElementById("submitBtn");
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const searchInput = document.getElementById("searchInput");
+    const tableBody = document.getElementById("tableBody");
+    const tableFoot = document.getElementById("tableFoot");
+    const totalKoliCell = document.getElementById("totalKoliCell");
+    const summaryBar = document.getElementById("summaryBar");
+
+    document.getElementById("tanggalPengiriman").valueAsDate = new Date();
+
+    function persist() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function formatTanggal(iso) {
+      if (!iso) return "-";
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function getFilteredRecords() {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) {
+        return records.map((item, idx) => ({ item, realIndex: idx }));
+      }
+      return records
+        .map((item, idx) => ({ item, realIndex: idx }))
+        .filter(({ item }) =>
+          [item.namaToko, item.noSuratJalan, item.noResi, item.tanggalPengiriman]
+            .some((val) => String(val || "").toLowerCase().includes(q))
+        );
+    }
+
+    function render() {
+      const filtered = getFilteredRecords();
+
+      if (filtered.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="7" class="empty">
+              ${records.length === 0 ? "Belum ada data pengiriman." : "Data tidak cocok dengan pencarian."}
+            </td>
+          </tr>
+        `;
+        tableFoot.style.display = "none";
+        summaryBar.textContent = `Menampilkan 0 dari ${records.length} data • Total Koli: 0`;
+        return;
+      }
+
+      let totalKoli = 0;
+      tableBody.innerHTML = filtered
+        .map(({ item, realIndex }, i) => {
+          const koli = Number(item.jumlahKoli) || 0;
+          totalKoli += koli;
+          return `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${escapeHtml(item.namaToko)}</td>
+              <td>${formatTanggal(item.tanggalPengiriman)}</td>
+              <td>${escapeHtml(item.noSuratJalan)}</td>
+              <td>${koli}</td>
+              <td>${escapeHtml(item.noResi)}</td>
+              <td>
+                <button type="button" class="btn-edit" onclick="mulaiEdit(${realIndex})">Edit</button>
+                <button type="button" class="btn-del" onclick="hapusData(${realIndex})">Hapus</button>
+              </td>
+            </tr>
+          `;
+        })
+        .join("");
+
+      totalKoliCell.textContent = totalKoli;
+      tableFoot.style.display = "";
+      summaryBar.textContent = `Menampilkan ${filtered.length} dari ${records.length} data • Total Koli: ${totalKoli}`;
+    }
+
+    function resetFormMode() {
+      editIndexInput.value = "";
+      submitBtn.textContent = "+ Simpan";
+      cancelEditBtn.style.display = "none";
+      document.getElementById("namaToko").value = "";
+      document.getElementById("noSuratJalan").value = "";
+      document.getElementById("jumlahKoli").value = "";
+      document.getElementById("noResi").value = "";
+      document.getElementById("namaToko").focus();
+    }
+
+    window.mulaiEdit = function (index) {
+      const item = records[index];
+      if (!item) return;
+      editIndexInput.value = String(index);
+      document.getElementById("namaToko").value = item.namaToko;
+      document.getElementById("tanggalPengiriman").value = item.tanggalPengiriman;
+      document.getElementById("noSuratJalan").value = item.noSuratJalan;
+      document.getElementById("jumlahKoli").value = item.jumlahKoli;
+      document.getElementById("noResi").value = item.noResi;
+      submitBtn.textContent = "Update";
+      cancelEditBtn.style.display = "";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.hapusData = function (index) {
+      records.splice(index, 1);
+      if (editIndexInput.value === String(index)) {
+        resetFormMode();
+      }
+      persist();
+      render();
+    };
+
+    cancelEditBtn.addEventListener("click", resetFormMode);
+    searchInput.addEventListener("input", render);
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const entry = {
+        namaToko: document.getElementById("namaToko").value.trim(),
+        tanggalPengiriman: document.getElementById("tanggalPengiriman").value,
+        noSuratJalan: document.getElementById("noSuratJalan").value.trim(),
+        jumlahKoli: parseInt(document.getElementById("jumlahKoli").value, 10) || 0,
+        noResi: document.getElementById("noResi").value.trim(),
+      };
+
+      const editIdx = editIndexInput.value;
+      if (editIdx !== "") {
+        records[Number(editIdx)] = entry;
+      } else {
+        records.push(entry);
+      }
+
+      persist();
+      render();
+      resetFormMode();
+    });
+
+    document.getElementById("clearAllBtn").addEventListener("click", function () {
+      if (records.length === 0) return;
+      if (confirm("Hapus semua data rekap pengiriman?")) {
+        records = [];
+        persist();
+        resetFormMode();
+        render();
+      }
+    });
+
+    document.getElementById("exportExcelBtn").addEventListener("click", function () {
+      const filtered = getFilteredRecords();
+      if (filtered.length === 0) {
+        alert("Tidak ada data untuk di-export.");
+        return;
+      }
+
+      const rows = filtered.map(({ item }, idx) => ({
+        "No": idx + 1,
+        "Nama Toko": item.namaToko,
+        "Tanggal Pengiriman": formatTanggal(item.tanggalPengiriman),
+        "No Surat Jalan": item.noSuratJalan,
+        "Jumlah Koli": Number(item.jumlahKoli) || 0,
+        "No Resi": item.noResi,
+      }));
+
+      const totalKoli = rows.reduce((acc, r) => acc + r["Jumlah Koli"], 0);
+      rows.push({
+        "No": "",
+        "Nama Toko": "",
+        "Tanggal Pengiriman": "",
+        "No Surat Jalan": "Total Koli",
+        "Jumlah Koli": totalKoli,
+        "No Resi": "",
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Rekap Pengiriman");
+
+      const today = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `rekap-pengiriman-${today}.xlsx`);
+    });
+
+    document.getElementById("exportPdfBtn").addEventListener("click", function () {
+      const filtered = getFilteredRecords();
+      if (filtered.length === 0) {
+        alert("Tidak ada data untuk di-export.");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const today = new Date().toISOString().slice(0, 10);
+
+      doc.setFontSize(14);
+      doc.text("REKAP PENGIRIMAN BARANG", 14, 15);
+      doc.setFontSize(9.5);
+      doc.text(`Tanggal Export: ${formatTanggal(today)}`, 14, 21);
+
+      let totalKoli = 0;
+      const body = filtered.map(({ item }, idx) => {
+        const koli = Number(item.jumlahKoli) || 0;
+        totalKoli += koli;
+        return [
+          idx + 1,
+          item.namaToko,
+          formatTanggal(item.tanggalPengiriman),
+          item.noSuratJalan,
+          koli,
+          item.noResi,
+        ];
+      });
+
+      body.push(["", "", "", "Total Koli", totalKoli, ""]);
+
+      doc.autoTable({
+        startY: 26,
+        head: [["No", "Nama Toko", "Tanggal Pengiriman", "No Surat Jalan", "Jumlah Koli", "No Resi"]],
+        body,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [15, 118, 110] },
+      });
+
+      doc.save(`rekap-pengiriman-${today}.pdf`);
+    });
+
+    render();
+  </script>
+</body>
+</html>
