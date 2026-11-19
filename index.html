@@ -137,6 +137,10 @@
       align-items: end;
     }
 
+    .form-group {
+      position: relative;
+    }
+
     .form-group label {
       display: block;
       font-size: 0.8rem;
@@ -155,7 +159,50 @@
       font-size: 0.9rem;
     }
 
-    /* Sembunyikan spinner panah naik-turun pada input jumlah koli */
+    .autocomplete-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      max-height: 210px;
+      overflow-y: auto;
+      background: var(--card);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+      z-index: 40;
+      display: none;
+    }
+
+    .autocomplete-list.open {
+      display: block;
+    }
+
+    .autocomplete-item {
+      padding: 8px 11px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.active {
+      background: var(--surface-alt);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .autocomplete-empty {
+      padding: 8px 11px;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
     #jumlahKoli::-webkit-outer-spin-button,
     #jumlahKoli::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -368,13 +415,19 @@
     </div>
 
     <div class="card">
-      <form id="pengirimanForm" class="form-grid">
+      <form id="pengirimanForm" class="form-grid" autocomplete="off">
         <input type="hidden" id="editIndex" value="" />
         <input type="hidden" id="editId" value="" />
 
         <div class="form-group">
           <label for="namaToko">Nama Toko</label>
-          <input type="text" id="namaToko" placeholder="Nama toko" required />
+          <input
+            type="text"
+            id="namaToko"
+            placeholder="Ketik sebagian nama toko..."
+            required
+          />
+          <div class="autocomplete-list" id="tokoSuggestions" role="listbox"></div>
         </div>
 
         <div class="form-group">
@@ -456,17 +509,23 @@
   </div>
 
   <script>
+    // Pastikan URL memakai endpoint Web App yang berakhiran /exec (bukan /macros/library/...)
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMGFCxAuwq7_E2JYeosMkboCxPgjjRB87J-pqsa6FV1ODRiHjF5-KdpdE1o9d5kF0WKw/exec";
     const STORAGE_KEY = "rekap_pengiriman_sheets_v1";
+    const TOKO_CACHE_KEY = "ekspedisi_daftar_toko_v1";
     const THEME_KEY = "ekspedisi_tema_v1";
 
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    let daftarToko = JSON.parse(localStorage.getItem(TOKO_CACHE_KEY) || "[]");
     let isBusy = false;
+    let activeSuggestionIdx = -1;
 
     const rootEl = document.documentElement;
     const themeToggleBtn = document.getElementById("themeToggleBtn");
     const metaThemeColor = document.getElementById("metaThemeColor");
     const form = document.getElementById("pengirimanForm");
+    const namaTokoInput = document.getElementById("namaToko");
+    const tokoSuggestionsEl = document.getElementById("tokoSuggestions");
     const jumlahKoliInput = document.getElementById("jumlahKoli");
     const editIndexInput = document.getElementById("editIndex");
     const editIdInput = document.getElementById("editId");
@@ -481,10 +540,88 @@
     const summaryBar = document.getElementById("summaryBar");
     const syncStatus = document.getElementById("syncStatus");
 
-    // Kunci perubahan angka saat scroll / slide wheel mouse pada input Jumlah Koli
     jumlahKoliInput.addEventListener("wheel", function (e) {
       e.preventDefault();
     }, { passive: false });
+
+    function getMatchingToko(query) {
+      const q = String(query || "").trim().toLowerCase();
+      if (!q) return daftarToko.slice(0, 25);
+      return daftarToko.filter((nama) => nama.toLowerCase().includes(q)).slice(0, 25);
+    }
+
+    function closeTokoSuggestions() {
+      activeSuggestionIdx = -1;
+      tokoSuggestionsEl.classList.remove("open");
+      tokoSuggestionsEl.innerHTML = "";
+    }
+
+    function selectToko(nama) {
+      namaTokoInput.value = nama;
+      closeTokoSuggestions();
+    }
+
+    function renderTokoSuggestions() {
+      const matches = getMatchingToko(namaTokoInput.value);
+      activeSuggestionIdx = -1;
+
+      if (daftarToko.length === 0) {
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Belum ada data di sheet "daftar toko". Ketik manual tetap bisa.</div>`;
+        tokoSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      if (matches.length === 0) {
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Tidak cocok di daftar toko. Tetap bisa pakai ketikan manual.</div>`;
+        tokoSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      tokoSuggestionsEl.innerHTML = matches
+        .map((nama, idx) => `<div class="autocomplete-item" role="option" data-idx="${idx}" data-value="${escapeHtml(nama)}">${escapeHtml(nama)}</div>`)
+        .join("");
+
+      tokoSuggestionsEl.querySelectorAll(".autocomplete-item").forEach((el) => {
+        el.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          selectToko(el.getAttribute("data-value") || "");
+        });
+      });
+
+      tokoSuggestionsEl.classList.add("open");
+    }
+
+    namaTokoInput.addEventListener("input", renderTokoSuggestions);
+    namaTokoInput.addEventListener("focus", renderTokoSuggestions);
+
+    namaTokoInput.addEventListener("keydown", function (e) {
+      if (!tokoSuggestionsEl.classList.contains("open")) return;
+      const items = tokoSuggestionsEl.querySelectorAll(".autocomplete-item");
+      if (!items.length) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        activeSuggestionIdx = (activeSuggestionIdx + 1) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === activeSuggestionIdx));
+        items[activeSuggestionIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        activeSuggestionIdx = (activeSuggestionIdx - 1 + items.length) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === activeSuggestionIdx));
+        items[activeSuggestionIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter" && activeSuggestionIdx >= 0) {
+        e.preventDefault();
+        selectToko(items[activeSuggestionIdx].getAttribute("data-value") || "");
+      } else if (e.key === "Escape") {
+        closeTokoSuggestions();
+      }
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest("#namaToko") && !e.target.closest("#tokoSuggestions")) {
+        closeTokoSuggestions();
+      }
+    });
 
     function setSyncStatus(text, type = "") {
       syncStatus.textContent = text;
@@ -550,14 +687,24 @@
 
     function persist() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      localStorage.setItem(TOKO_CACHE_KEY, JSON.stringify(daftarToko));
     }
 
     function formatTanggal(iso) {
       if (!iso) return "-";
-      const parts = String(iso).split("-");
-      if (parts.length !== 3) return String(iso);
-      const [y, m, d] = parts;
-      return `${d}/${m}/${y}`;
+      const str = String(iso).trim();
+      const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(str);
+      if (isoMatch) {
+        return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+      }
+      const parsed = new Date(str);
+      if (!Number.isNaN(parsed.getTime())) {
+        const d = String(parsed.getDate()).padStart(2, "0");
+        const m = String(parsed.getMonth() + 1).padStart(2, "0");
+        const y = parsed.getFullYear();
+        return `${d}/${m}/${y}`;
+      }
+      return str;
     }
 
     function escapeHtml(str) {
@@ -629,16 +776,17 @@
       editIdInput.value = "";
       submitBtn.textContent = "+ Simpan";
       cancelEditBtn.style.display = "none";
-      document.getElementById("namaToko").value = "";
+      namaTokoInput.value = "";
       document.getElementById("noSuratJalan").value = "";
       jumlahKoliInput.value = "";
       document.getElementById("noResi").value = "";
-      document.getElementById("namaToko").focus();
+      closeTokoSuggestions();
+      namaTokoInput.focus();
     }
 
     async function muatDariSheets() {
       if (!isConfigured()) {
-        setSyncStatus("URL Apps Script belum diisi", "err");
+        setSyncStatus("URL harus berakhiran /exec", "err");
         return;
       }
       setBusy(true);
@@ -654,9 +802,12 @@
           id: row.id || createId(),
           jumlahKoli: Number(row.jumlahKoli) || 0,
         }));
+        if (Array.isArray(json.toko)) {
+          daftarToko = json.toko;
+        }
         persist();
         render();
-        setSyncStatus("Tersinkron ke Google Sheets", "ok");
+        setSyncStatus(`Tersinkron (${daftarToko.length} toko)`, "ok");
       } catch (err) {
         console.error(err);
         setSyncStatus("Gagal sinkron (pakai cache lokal)", "err");
@@ -667,7 +818,7 @@
 
     async function kirimKeSheets(payload) {
       if (!isConfigured()) {
-        throw new Error("URL Web App Google Apps Script belum diisi.");
+        throw new Error("URL Web App harus berakhiran /exec.");
       }
       const res = await fetch(APPS_SCRIPT_URL, {
         method: "POST",
@@ -686,13 +837,14 @@
       if (!item) return;
       editIndexInput.value = String(index);
       editIdInput.value = item.id || "";
-      document.getElementById("namaToko").value = item.namaToko;
+      namaTokoInput.value = item.namaToko;
       document.getElementById("tanggalPengiriman").value = item.tanggalPengiriman;
       document.getElementById("noSuratJalan").value = item.noSuratJalan;
       jumlahKoliInput.value = item.jumlahKoli;
       document.getElementById("noResi").value = item.noResi;
       submitBtn.textContent = "Update";
       cancelEditBtn.style.display = "";
+      closeTokoSuggestions();
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
@@ -735,7 +887,7 @@
 
       const entry = {
         id: existingId,
-        namaToko: document.getElementById("namaToko").value.trim(),
+        namaToko: namaTokoInput.value.trim(),
         tanggalPengiriman: document.getElementById("tanggalPengiriman").value,
         noSuratJalan: document.getElementById("noSuratJalan").value.trim(),
         jumlahKoli: parseInt(jumlahKoliInput.value, 10) || 0,
