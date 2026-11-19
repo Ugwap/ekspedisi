@@ -17,6 +17,8 @@
       --input-bg: #ffffff;
       --primary: #0f766e;
       --primary-hover: #115e59;
+      --sync-bg: #e0f2fe;
+      --sync-text: #0369a1;
       --excel: #15803d;
       --pdf: #dc2626;
       --warn-bg: #fef3c7;
@@ -40,6 +42,8 @@
       --input-bg: #0f172a;
       --primary: #14b8a6;
       --primary-hover: #0d9488;
+      --sync-bg: rgba(14, 165, 233, 0.16);
+      --sync-text: #38bdf8;
       --excel: #16a34a;
       --pdf: #ef4444;
       --warn-bg: rgba(245, 158, 11, 0.16);
@@ -175,8 +179,13 @@
       transition: opacity 0.15s, background 0.15s;
     }
 
-    button:hover {
+    button:hover:not(:disabled) {
       opacity: 0.92;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .btn-primary {
@@ -189,13 +198,18 @@
       color: #062824;
     }
 
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
       background: var(--primary-hover);
     }
 
     .btn-cancel {
       background: var(--cancel-bg);
       color: var(--cancel-text);
+    }
+
+    .btn-sync {
+      background: var(--sync-bg);
+      color: var(--sync-text);
     }
 
     .btn-excel {
@@ -294,10 +308,34 @@
       padding: 28px 12px;
     }
 
-    .meta {
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
       font-size: 0.86rem;
       color: var(--muted);
       margin-bottom: 10px;
+    }
+
+    .status-badge {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--surface-alt);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .status-badge.ok {
+      color: var(--primary);
+    }
+
+    .status-badge.err {
+      color: var(--danger);
+      background: var(--danger-bg);
     }
   </style>
 </head>
@@ -306,7 +344,7 @@
     <div class="header">
       <div class="header-left">
         <h1>Rekap Pengiriman Barang</h1>
-        <p class="subtitle">Penyimpanan lokal browser • Tanpa database</p>
+        <p class="subtitle">Terhubung ke Google Sheets • Akses multi-perangkat</p>
       </div>
       <button
         type="button"
@@ -320,6 +358,7 @@
     <div class="card">
       <form id="pengirimanForm" class="form-grid">
         <input type="hidden" id="editIndex" value="" />
+        <input type="hidden" id="editId" value="" />
 
         <div class="form-group">
           <label for="namaToko">Nama Toko</label>
@@ -354,7 +393,10 @@
     </div>
 
     <div class="card">
-      <div class="meta" id="summaryBar">Menampilkan 0 data • Total Koli: 0</div>
+      <div class="meta-row">
+        <div id="summaryBar">Menampilkan 0 dari 0 data • Total Koli: 0</div>
+        <span class="status-badge" id="syncStatus">Menunggu sinkronisasi...</span>
+      </div>
 
       <div class="toolbar">
         <input
@@ -364,6 +406,7 @@
           placeholder="Cari nama toko, no surat jalan, atau no resi..."
         />
         <div class="btn-group">
+          <button type="button" class="btn-sync" id="refreshBtn">↻ Sinkron</button>
           <button type="button" class="btn-excel" id="exportExcelBtn">Export Excel (.xlsx)</button>
           <button type="button" class="btn-pdf" id="exportPdfBtn">Export PDF</button>
           <button type="button" class="btn-danger" id="clearAllBtn">Reset Semua</button>
@@ -401,23 +444,56 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "rekap_pengiriman_tanpa_db_v1";
+    const APPS_SCRIPT_URL = "TEMPEL_URL_WEB_APP_KAMU_DISINI";
+    const STORAGE_KEY = "rekap_pengiriman_sheets_v1";
     const THEME_KEY = "ekspedisi_tema_v1";
 
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    let isBusy = false;
 
     const rootEl = document.documentElement;
     const themeToggleBtn = document.getElementById("themeToggleBtn");
     const metaThemeColor = document.getElementById("metaThemeColor");
     const form = document.getElementById("pengirimanForm");
     const editIndexInput = document.getElementById("editIndex");
+    const editIdInput = document.getElementById("editId");
     const submitBtn = document.getElementById("submitBtn");
     const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const clearAllBtn = document.getElementById("clearAllBtn");
     const searchInput = document.getElementById("searchInput");
     const tableBody = document.getElementById("tableBody");
     const tableFoot = document.getElementById("tableFoot");
     const totalKoliCell = document.getElementById("totalKoliCell");
     const summaryBar = document.getElementById("summaryBar");
+    const syncStatus = document.getElementById("syncStatus");
+
+    function setSyncStatus(text, type = "") {
+      syncStatus.textContent = text;
+      syncStatus.className = "status-badge" + (type ? " " + type : "");
+    }
+
+    function setBusy(state) {
+      isBusy = state;
+      submitBtn.disabled = state;
+      refreshBtn.disabled = state;
+      clearAllBtn.disabled = state;
+      document.querySelectorAll(".btn-edit, .btn-del").forEach((btn) => {
+        btn.disabled = state;
+      });
+    }
+
+    function isConfigured() {
+      return (
+        typeof APPS_SCRIPT_URL === "string" &&
+        APPS_SCRIPT_URL.startsWith("https://script.google.com/macros/s/") &&
+        !APPS_SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbzMGFCxAuwq7_E2JYeosMkboCxPgjjRB87J-pqsa6FV1ODRiHjF5-KdpdE1o9d5kF0WKw/exec")
+      );
+    }
+
+    function createId() {
+      return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    }
 
     function getPreferredTheme() {
       const saved = localStorage.getItem(THEME_KEY);
@@ -460,7 +536,9 @@
 
     function formatTanggal(iso) {
       if (!iso) return "-";
-      const [y, m, d] = iso.split("-");
+      const parts = String(iso).split("-");
+      if (parts.length !== 3) return String(iso);
+      const [y, m, d] = parts;
       return `${d}/${m}/${y}`;
     }
 
@@ -496,6 +574,7 @@
         `;
         tableFoot.style.display = "none";
         summaryBar.textContent = `Menampilkan 0 dari ${records.length} data • Total Koli: 0`;
+        setBusy(isBusy);
         return;
       }
 
@@ -524,10 +603,12 @@
       totalKoliCell.textContent = totalKoli;
       tableFoot.style.display = "";
       summaryBar.textContent = `Menampilkan ${filtered.length} dari ${records.length} data • Total Koli: ${totalKoli}`;
+      setBusy(isBusy);
     }
 
     function resetFormMode() {
       editIndexInput.value = "";
+      editIdInput.value = "";
       submitBtn.textContent = "+ Simpan";
       cancelEditBtn.style.display = "none";
       document.getElementById("namaToko").value = "";
@@ -537,10 +618,56 @@
       document.getElementById("namaToko").focus();
     }
 
+    async function muatDariSheets() {
+      if (!isConfigured()) {
+        setSyncStatus("URL Apps Script belum diisi", "err");
+        return;
+      }
+      setBusy(true);
+      setSyncStatus("Menyinkronkan...", "");
+      try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?t=${Date.now()}`);
+        const json = await res.json();
+        if (!json.ok) {
+          throw new Error(json.error || "Gagal memuat data dari Google Sheets");
+        }
+        records = (Array.isArray(json.data) ? json.data : []).map((row) => ({
+          ...row,
+          id: row.id || createId(),
+          jumlahKoli: Number(row.jumlahKoli) || 0,
+        }));
+        persist();
+        render();
+        setSyncStatus("Tersinkron ke Google Sheets", "ok");
+      } catch (err) {
+        console.error(err);
+        setSyncStatus("Gagal sinkron (pakai cache lokal)", "err");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function kirimKeSheets(payload) {
+      if (!isConfigured()) {
+        throw new Error("URL Web App Google Apps Script belum diisi.");
+      }
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        throw new Error(json.error || "Gagal menyimpan ke Google Sheets");
+      }
+      return json;
+    }
+
     window.mulaiEdit = function (index) {
       const item = records[index];
       if (!item) return;
       editIndexInput.value = String(index);
+      editIdInput.value = item.id || "";
       document.getElementById("namaToko").value = item.namaToko;
       document.getElementById("tanggalPengiriman").value = item.tanggalPengiriman;
       document.getElementById("noSuratJalan").value = item.noSuratJalan;
@@ -551,22 +678,45 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    window.hapusData = function (index) {
-      records.splice(index, 1);
-      if (editIndexInput.value === String(index)) {
-        resetFormMode();
+    window.hapusData = async function (index) {
+      if (isBusy) return;
+      const target = records[index];
+      if (!target) return;
+
+      setBusy(true);
+      setSyncStatus("Menghapus data...", "");
+      try {
+        if (isConfigured() && target.id) {
+          await kirimKeSheets({ action: "delete", id: target.id });
+        }
+        records.splice(index, 1);
+        if (editIndexInput.value === String(index)) {
+          resetFormMode();
+        }
+        persist();
+        render();
+        setSyncStatus("Tersinkron ke Google Sheets", "ok");
+      } catch (err) {
+        alert("Gagal menghapus di Google Sheets: " + err.message);
+        setSyncStatus("Gagal sinkron", "err");
+      } finally {
+        setBusy(false);
       }
-      persist();
-      render();
     };
 
     cancelEditBtn.addEventListener("click", resetFormMode);
     searchInput.addEventListener("input", render);
+    refreshBtn.addEventListener("click", muatDariSheets);
 
-    form.addEventListener("submit", function (e) {
+    form.addEventListener("submit", async function (e) {
       e.preventDefault();
+      if (isBusy) return;
+
+      const editIdx = editIndexInput.value;
+      const existingId = editIdInput.value || createId();
 
       const entry = {
+        id: existingId,
         namaToko: document.getElementById("namaToko").value.trim(),
         tanggalPengiriman: document.getElementById("tanggalPengiriman").value,
         noSuratJalan: document.getElementById("noSuratJalan").value.trim(),
@@ -574,25 +724,51 @@
         noResi: document.getElementById("noResi").value.trim(),
       };
 
-      const editIdx = editIndexInput.value;
-      if (editIdx !== "") {
-        records[Number(editIdx)] = entry;
-      } else {
-        records.push(entry);
-      }
+      setBusy(true);
+      setSyncStatus("Menyimpan ke Sheets...", "");
 
-      persist();
-      render();
-      resetFormMode();
+      try {
+        if (editIdx !== "") {
+          await kirimKeSheets({ action: "update", item: entry });
+          records[Number(editIdx)] = entry;
+        } else {
+          const resp = await kirimKeSheets({ action: "add", item: entry });
+          if (resp && resp.id) entry.id = resp.id;
+          records.push(entry);
+        }
+
+        persist();
+        render();
+        resetFormMode();
+        setSyncStatus("Tersinkron ke Google Sheets", "ok");
+      } catch (err) {
+        alert("Gagal menyimpan ke Google Sheets: " + err.message);
+        setSyncStatus("Gagal menyimpan", "err");
+      } finally {
+        setBusy(false);
+      }
     });
 
-    document.getElementById("clearAllBtn").addEventListener("click", function () {
-      if (records.length === 0) return;
-      if (confirm("Hapus semua data rekap pengiriman?")) {
+    clearAllBtn.addEventListener("click", async function () {
+      if (isBusy || records.length === 0) return;
+      if (!confirm("Hapus semua data rekap pengiriman (termasuk di Google Sheets)?")) return;
+
+      setBusy(true);
+      setSyncStatus("Menghapus semua data...", "");
+      try {
+        if (isConfigured()) {
+          await kirimKeSheets({ action: "clear" });
+        }
         records = [];
         persist();
         resetFormMode();
         render();
+        setSyncStatus("Tersinkron ke Google Sheets", "ok");
+      } catch (err) {
+        alert("Gagal mereset data di Google Sheets: " + err.message);
+        setSyncStatus("Gagal sinkron", "err");
+      } finally {
+        setBusy(false);
       }
     });
 
@@ -674,6 +850,7 @@
     });
 
     render();
+    muatDariSheets();
   </script>
 </body>
 </html>
