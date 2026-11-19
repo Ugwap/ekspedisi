@@ -155,6 +155,18 @@
       font-size: 0.9rem;
     }
 
+    /* Sembunyikan spinner panah naik-turun pada input jumlah koli */
+    #jumlahKoli::-webkit-outer-spin-button,
+    #jumlahKoli::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    #jumlahKoli[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
     .form-group input:focus {
       outline: none;
       border-color: var(--primary);
@@ -455,6 +467,7 @@
     const themeToggleBtn = document.getElementById("themeToggleBtn");
     const metaThemeColor = document.getElementById("metaThemeColor");
     const form = document.getElementById("pengirimanForm");
+    const jumlahKoliInput = document.getElementById("jumlahKoli");
     const editIndexInput = document.getElementById("editIndex");
     const editIdInput = document.getElementById("editId");
     const submitBtn = document.getElementById("submitBtn");
@@ -467,6 +480,11 @@
     const totalKoliCell = document.getElementById("totalKoliCell");
     const summaryBar = document.getElementById("summaryBar");
     const syncStatus = document.getElementById("syncStatus");
+
+    // Kunci perubahan angka saat scroll / slide wheel mouse pada input Jumlah Koli
+    jumlahKoliInput.addEventListener("wheel", function (e) {
+      e.preventDefault();
+    }, { passive: false });
 
     function setSyncStatus(text, type = "") {
       syncStatus.textContent = text;
@@ -613,7 +631,7 @@
       cancelEditBtn.style.display = "none";
       document.getElementById("namaToko").value = "";
       document.getElementById("noSuratJalan").value = "";
-      document.getElementById("jumlahKoli").value = "";
+      jumlahKoliInput.value = "";
       document.getElementById("noResi").value = "";
       document.getElementById("namaToko").focus();
     }
@@ -671,7 +689,7 @@
       document.getElementById("namaToko").value = item.namaToko;
       document.getElementById("tanggalPengiriman").value = item.tanggalPengiriman;
       document.getElementById("noSuratJalan").value = item.noSuratJalan;
-      document.getElementById("jumlahKoli").value = item.jumlahKoli;
+      jumlahKoliInput.value = item.jumlahKoli;
       document.getElementById("noResi").value = item.noResi;
       submitBtn.textContent = "Update";
       cancelEditBtn.style.display = "";
@@ -720,7 +738,7 @@
         namaToko: document.getElementById("namaToko").value.trim(),
         tanggalPengiriman: document.getElementById("tanggalPengiriman").value,
         noSuratJalan: document.getElementById("noSuratJalan").value.trim(),
-        jumlahKoli: parseInt(document.getElementById("jumlahKoli").value, 10) || 0,
+        jumlahKoli: parseInt(jumlahKoliInput.value, 10) || 0,
         noResi: document.getElementById("noResi").value.trim(),
       };
 
@@ -779,26 +797,56 @@
         return;
       }
 
-      const rows = filtered.map(({ item }, idx) => ({
-        "No": idx + 1,
-        "Nama Toko": item.namaToko,
-        "Tanggal Pengiriman": formatTanggal(item.tanggalPengiriman),
-        "No Surat Jalan": item.noSuratJalan,
-        "Jumlah Koli": Number(item.jumlahKoli) || 0,
-        "No Resi": item.noResi,
-      }));
+      const headers = [
+        "No",
+        "Nama Toko",
+        "Tanggal Pengiriman",
+        "No Surat Jalan",
+        "Jumlah Koli",
+        "No Resi",
+      ];
 
-      const totalKoli = rows.reduce((acc, r) => acc + r["Jumlah Koli"], 0);
-      rows.push({
-        "No": "",
-        "Nama Toko": "",
-        "Tanggal Pengiriman": "",
-        "No Surat Jalan": "Total Koli",
-        "Jumlah Koli": totalKoli,
-        "No Resi": "",
+      let totalKoli = 0;
+      const dataRows = filtered.map(({ item }, idx) => {
+        const koli = Number(item.jumlahKoli) || 0;
+        totalKoli += koli;
+        return [
+          idx + 1,
+          String(item.namaToko ?? ""),
+          formatTanggal(item.tanggalPengiriman),
+          String(item.noSuratJalan ?? ""),
+          koli,
+          String(item.noResi ?? ""),
+        ];
       });
 
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const totalRow = ["", "", "", "Total Koli", totalKoli, ""];
+      const aoa = [headers, ...dataRows, totalRow];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      const totalDataRows = dataRows.length;
+      for (let r = 1; r <= totalDataRows; r++) {
+        const sjCell = ws[XLSX.utils.encode_cell({ r, c: 3 })];
+        if (sjCell) {
+          sjCell.t = "s";
+          sjCell.z = "@";
+        }
+        const resiCell = ws[XLSX.utils.encode_cell({ r, c: 5 })];
+        if (resiCell) {
+          resiCell.t = "s";
+          resiCell.z = "@";
+        }
+      }
+
+      ws["!cols"] = [
+        { wch: 6 },
+        { wch: 28 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 14 },
+        { wch: 24 },
+      ];
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Rekap Pengiriman");
 
@@ -818,32 +866,58 @@
       const today = new Date().toISOString().slice(0, 10);
 
       doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
       doc.text("REKAP PENGIRIMAN BARANG", 14, 15);
+
       doc.setFontSize(9.5);
-      doc.text(`Tanggal Export: ${formatTanggal(today)}`, 14, 21);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Tanggal Export: ${formatTanggal(today)} • Jumlah Baris: ${filtered.length}`, 14, 21);
 
       let totalKoli = 0;
       const body = filtered.map(({ item }, idx) => {
         const koli = Number(item.jumlahKoli) || 0;
         totalKoli += koli;
         return [
-          idx + 1,
-          item.namaToko,
+          String(idx + 1),
+          String(item.namaToko ?? ""),
           formatTanggal(item.tanggalPengiriman),
-          item.noSuratJalan,
-          koli,
-          item.noResi,
+          String(item.noSuratJalan ?? ""),
+          String(koli),
+          String(item.noResi ?? ""),
         ];
       });
 
-      body.push(["", "", "", "Total Koli", totalKoli, ""]);
+      const totalRowIndex = body.length;
+      body.push(["", "", "", "Total Koli", String(totalKoli), ""]);
 
       doc.autoTable({
         startY: 26,
         head: [["No", "Nama Toko", "Tanggal Pengiriman", "No Surat Jalan", "Jumlah Koli", "No Resi"]],
         body,
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [15, 118, 110] },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+          textColor: [15, 23, 42],
+        },
+        headStyles: {
+          fillColor: [15, 118, 110],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        columnStyles: {
+          0: { halign: "center", cellWidth: 14 },
+          1: { cellWidth: "auto" },
+          2: { halign: "center", cellWidth: 36 },
+          3: { cellWidth: 42 },
+          4: { halign: "right", cellWidth: 28 },
+          5: { cellWidth: 52 },
+        },
+        didParseCell: function (data) {
+          if (data.section === "body" && data.row.index === totalRowIndex) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [241, 245, 249];
+          }
+        },
       });
 
       doc.save(`rekap-pengiriman-${today}.pdf`);
