@@ -1031,4 +1031,621 @@
       } else if (e.key === "ArrowUp" && items.length) {
         e.preventDefault();
         activeTokoIdx = (activeTokoIdx - 1 + items.length) % items.length;
-        items.forEach((el, i) => el.classList.toggle("active", i
+        items.forEach((el, i) => el.classList.toggle("active", i === activeTokoIdx));
+        items[activeTokoIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter") {
+        if (activeTokoIdx >= 0 && items[activeTokoIdx]) {
+          e.preventDefault();
+          toggleTokoSelection(items[activeTokoIdx].getAttribute("data-value") || "");
+        } else if (namaTokoInput.value.trim()) {
+          e.preventDefault();
+          addManualTokoFromInput();
+        }
+      } else if (e.key === "Escape") {
+        closeTokoSuggestions();
+      }
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest("#regionalInput") && !e.target.closest("#regionalSuggestions")) {
+        closeRegionalSuggestions();
+      }
+      if (!e.target.closest("#namaToko") && !e.target.closest("#tokoSuggestions")) {
+        closeTokoSuggestions();
+      }
+    });
+
+    function setSyncStatus(text, type = "") {
+      syncStatus.textContent = text;
+      syncStatus.className = "status-badge" + (type ? " " + type : "");
+    }
+
+    function setBusy(state) {
+      isBusy = state;
+      submitBtn.disabled = state;
+      refreshBtn.disabled = state;
+      clearAllBtn.disabled = state;
+      document.querySelectorAll(".btn-edit, .btn-del").forEach((btn) => {
+        btn.disabled = state;
+      });
+      deleteEditBtn.disabled = state;
+    }
+
+    function isConfigured() {
+      return (
+        typeof APPS_SCRIPT_URL === "string" &&
+        APPS_SCRIPT_URL.startsWith("https://script.google.com/macros/s/") &&
+        APPS_SCRIPT_URL.endsWith("/exec")
+      );
+    }
+
+    function createId() {
+      return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    }
+
+    function getPreferredTheme() {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "dark" || saved === "light") return saved;
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    }
+
+    function applyTheme(theme, save = false) {
+      const isDark = theme === "dark";
+      if (isDark) {
+        rootEl.setAttribute("data-theme", "dark");
+        themeToggleBtn.textContent = "☀️";
+        themeToggleBtn.title = "Ganti ke mode terang";
+        metaThemeColor.setAttribute("content", "#0b1120");
+      } else {
+        rootEl.removeAttribute("data-theme");
+        themeToggleBtn.textContent = "🌙";
+        themeToggleBtn.title = "Ganti ke mode gelap";
+        metaThemeColor.setAttribute("content", "#0f766e");
+      }
+      if (save) {
+        localStorage.setItem(THEME_KEY, theme);
+      }
+    }
+
+    applyTheme(getPreferredTheme(), false);
+
+    themeToggleBtn.addEventListener("click", function () {
+      const currentIsDark = rootEl.getAttribute("data-theme") === "dark";
+      applyTheme(currentIsDark ? "light" : "dark", true);
+    });
+
+    document.getElementById("tanggalPengiriman").valueAsDate = new Date();
+
+    function persist() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      localStorage.setItem(REGIONAL_CACHE_KEY, JSON.stringify(regionalList));
+      localStorage.setItem(TOKO_BY_REGIONAL_CACHE_KEY, JSON.stringify(tokoByRegional));
+    }
+
+    function formatTanggal(iso) {
+      if (!iso) return "-";
+      const str = String(iso).trim();
+      const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(str);
+      if (isoMatch) {
+        return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+      }
+      const parsed = new Date(str);
+      if (!Number.isNaN(parsed.getTime())) {
+        const d = String(parsed.getDate()).padStart(2, "0");
+        const m = String(parsed.getMonth() + 1).padStart(2, "0");
+        const y = parsed.getFullYear();
+        return `${d}/${m}/${y}`;
+      }
+      return str;
+    }
+
+    function getFilteredRecords() {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) {
+        return records.map((item, idx) => ({ item, realIndex: idx }));
+      }
+      return records
+        .map((item, idx) => ({ item, realIndex: idx }))
+        .filter(({ item }) =>
+          [item.regional, item.namaToko, item.noSuratJalan, item.noResi, item.tanggalPengiriman]
+            .some((val) => String(val || "").toLowerCase().includes(q))
+        );
+    }
+
+    function render() {
+      const filtered = getFilteredRecords();
+
+      if (filtered.length === 0) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty">
+              ${records.length === 0 ? "Belum ada data pengiriman." : "Data tidak cocok dengan pencarian."}
+            </td>
+          </tr>
+        `;
+        tableFoot.style.display = "none";
+        summaryBar.textContent = `Menampilkan 0 dari ${records.length} data • Total Koli: 0`;
+        setBusy(isBusy);
+        return;
+      }
+
+      let totalKoli = 0;
+      tableBody.innerHTML = filtered
+        .map(({ item, realIndex }, i) => {
+          const koli = Number(item.jumlahKoli) || 0;
+          totalKoli += koli;
+          return `
+            <tr>
+              <td>${i + 1}</td>
+              <td>${escapeHtml(item.regional)}</td>
+              <td class="toko-col">${formatStackHtml(item.namaToko)}</td>
+              <td class="sj-col">${formatStackHtml(item.noSuratJalan)}</td>
+              <td>${formatTanggal(item.tanggalPengiriman)}</td>
+              <td>${koli}</td>
+              <td>${escapeHtml(item.noResi)}</td>
+              <td>
+                <button type="button" class="btn-edit" onclick="mulaiEdit(${realIndex})">Edit</button>
+              </td>
+            </tr>
+          `;
+        })
+        .join("");
+
+      totalKoliCell.textContent = totalKoli;
+      tableFoot.style.display = "";
+      summaryBar.textContent = `Menampilkan ${filtered.length} dari ${records.length} data • Total Koli: ${totalKoli}`;
+      setBusy(isBusy);
+    }
+
+    function resetFormMode() {
+      editIndexInput.value = "";
+      editIdInput.value = "";
+      submitBtn.textContent = "+ Simpan";
+      cancelEditBtn.style.display = "none";
+      deleteEditBtn.style.display = "none";
+      regionalInput.value = "";
+      selectedTokoEntries = [];
+      namaTokoInput.value = "";
+      renderTokoSjRows();
+      jumlahKoliInput.value = "";
+      document.getElementById("noResi").value = "";
+      updateTokoPlaceholder();
+      closeRegionalSuggestions();
+      closeTokoSuggestions();
+      regionalInput.focus();
+    }
+
+    async function muatDariSheets() {
+      if (!isConfigured()) {
+        setSyncStatus("URL harus berakhiran /exec", "err");
+        return;
+      }
+      setBusy(true);
+      setSyncStatus("Menyinkronkan...", "");
+      try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?t=${Date.now()}`);
+        const json = await res.json();
+        if (!json.ok) {
+          throw new Error(json.error || "Gagal memuat data dari Google Sheets");
+        }
+        records = (Array.isArray(json.data) ? json.data : []).map((row) => ({
+          ...row,
+          id: row.id || createId(),
+          regional: row.regional || "",
+          jumlahKoli: Number(row.jumlahKoli) || 0,
+        }));
+        if (Array.isArray(json.regionalList)) {
+          regionalList = json.regionalList;
+        }
+        if (json.tokoByRegional && typeof json.tokoByRegional === "object") {
+          tokoByRegional = json.tokoByRegional;
+        }
+        persist();
+        render();
+        setSyncStatus(`Tersinkron (${regionalList.length} regional)`, "ok");
+      } catch (err) {
+        console.error(err);
+        setSyncStatus("Gagal sinkron (pakai cache lokal)", "err");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function kirimKeSheets(payload) {
+      if (!isConfigured()) {
+        throw new Error("URL Web App harus berakhiran /exec.");
+      }
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        throw new Error(json.error || "Gagal menyimpan ke Google Sheets");
+      }
+      return json;
+    }
+
+    window.mulaiEdit = function (index) {
+      const item = records[index];
+      if (!item) return;
+      editIndexInput.value = String(index);
+      editIdInput.value = item.id || "";
+      regionalInput.value = item.regional || "";
+
+      const tokos = splitCommaList(item.namaToko);
+      const sjs = splitCommaList(item.noSuratJalan);
+      selectedTokoEntries = tokos.map((toko, idx) => ({
+        toko,
+        suratJalan: sjs[idx] || (sjs.length === 1 ? sjs[0] : "") || "",
+      }));
+
+      namaTokoInput.value = "";
+      renderTokoSjRows();
+      document.getElementById("tanggalPengiriman").value = item.tanggalPengiriman;
+      jumlahKoliInput.value = item.jumlahKoli;
+      document.getElementById("noResi").value = item.noResi;
+      submitBtn.textContent = "Update";
+      cancelEditBtn.style.display = "";
+      deleteEditBtn.style.display = "";
+      updateTokoPlaceholder();
+      closeRegionalSuggestions();
+      closeTokoSuggestions();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.hapusData = async function (index) {
+      if (isBusy) return;
+      const target = records[index];
+      if (!target) return;
+
+      setBusy(true);
+      setSyncStatus("Menghapus data...", "");
+      try {
+        if (isConfigured() && target.id) {
+          await kirimKeSheets({ action: "delete", id: target.id });
+        }
+        records.splice(index, 1);
+        if (editIndexInput.value === String(index)) {
+          resetFormMode();
+        }
+        persist();
+        render();
+        setSyncStatus("Tersinkron ke Google Sheets", "ok");
+      } catch (err) {
+        alert("Gagal menghapus di Google Sheets: " + err.message);
+        setSyncStatus("Gagal sinkron", "err");
+      } finally {
+        setBusy(false);
+      }
+    };
+
+    cancelEditBtn.addEventListener("click", resetFormMode);
+
+    // Hapus hanya tersedia saat mode edit, supaya tidak gampang terhapus.
+    deleteEditBtn.addEventListener("click", async function () {
+      if (isBusy) return;
+      const idx = Number(editIndexInput.value);
+      const target = records[idx];
+      if (editIndexInput.value === "" || !target) return;
+
+      const label = [target.namaToko, target.regional]
+        .filter((v) => String(v || "").trim())
+        .join(" • ");
+      if (!confirm(`Hapus data ini?\n\n${label}`)) return;
+
+      await window.hapusData(idx);
+    });
+    searchInput.addEventListener("input", render);
+    refreshBtn.addEventListener("click", muatDariSheets);
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      if (isBusy) return;
+
+      if (namaTokoInput.value.trim()) {
+        addManualTokoFromInput();
+      }
+
+      if (selectedTokoEntries.length === 0) {
+        alert("Pilih atau isi minimal satu Nama Toko terlebih dahulu.");
+        namaTokoInput.focus();
+        return;
+      }
+
+      // Sinkronkan nilai terbaru dari input No Surat Jalan per toko
+      tokoSjListEl.querySelectorAll(".sj-per-toko-input").forEach((inp) => {
+        const idx = Number(inp.getAttribute("data-idx"));
+        if (selectedTokoEntries[idx]) {
+          selectedTokoEntries[idx].suratJalan = inp.value.trim();
+        }
+      });
+
+      const missingSjIdx = selectedTokoEntries.findIndex((e) => !String(e.suratJalan || "").trim());
+      if (missingSjIdx >= 0) {
+        alert(`Isi No Surat Jalan untuk toko "${selectedTokoEntries[missingSjIdx].toko}".`);
+        const targetInp = tokoSjListEl.querySelector(`.sj-per-toko-input[data-idx="${missingSjIdx}"]`);
+        if (targetInp) targetInp.focus();
+        return;
+      }
+
+      const finalToko = selectedTokoEntries.map((e) => e.toko.trim()).join(", ");
+      const finalSuratJalan = selectedTokoEntries.map((e) => e.suratJalan.trim()).join(", ");
+
+      const editIdx = editIndexInput.value;
+      const existingId = editIdInput.value || createId();
+
+      const entry = {
+        id: existingId,
+        regional: regionalInput.value.trim(),
+        namaToko: finalToko,
+        noSuratJalan: finalSuratJalan,
+        tanggalPengiriman: document.getElementById("tanggalPengiriman").value,
+        jumlahKoli: parseInt(jumlahKoliInput.value, 10) || 0,
+        noResi: document.getElementById("noResi").value.trim(),
+      };
+
+      setBusy(true);
+      setSyncStatus("Menyimpan ke Sheets...", "");
+
+      try {
+        if (editIdx !== "") {
+          await kirimKeSheets({ action: "update", item: entry });
+          records[Number(editIdx)] = entry;
+        } else {
+          const resp = await kirimKeSheets({ action: "add", item: entry });
+          if (resp && resp.id) entry.id = resp.id;
+          records.push(entry);
+        }
+
+        persist();
+        render();
+        resetFormMode();
+        setSyncStatus("Tersinkron ke Google Sheets", "ok");
+      } catch (err) {
+        alert("Gagal menyimpan ke Google Sheets: " + err.message);
+        setSyncStatus("Gagal menyimpan", "err");
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    clearAllBtn.addEventListener("click", async function () {
+      if (isBusy || records.length === 0) return;
+      if (!confirm("Hapus semua data rekap pengiriman (termasuk di Google Sheets)?")) return;
+
+      setBusy(true);
+      setSyncStatus("Menghapus semua data...", "");
+      try {
+        if (isConfigured()) {
+          await kirimKeSheets({ action: "clear" });
+        }
+        records = [];
+        persist();
+        resetFormMode();
+        render();
+        setSyncStatus("Tersinkron ke Google Sheets", "ok");
+      } catch (err) {
+        alert("Gagal mereset data di Google Sheets: " + err.message);
+        setSyncStatus("Gagal sinkron", "err");
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    function cloneStyle(style) {
+      return style ? JSON.parse(JSON.stringify(style)) : {};
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // Export memakai template.xlsx supaya bentuk, lebar kolom, border, dan
+    // setelan cetak sama persis dengan form rekap pengiriman.
+    document.getElementById("exportExcelBtn").addEventListener("click", async function () {
+      const filtered = getFilteredRecords();
+      if (filtered.length === 0) {
+        alert("Tidak ada data untuk di-export.");
+        return;
+      }
+
+      const btn = this;
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Menyiapkan...";
+
+      try {
+        const res = await fetch("template.xlsx", { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("template.xlsx tidak bisa dimuat (" + res.status + ")");
+        }
+
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.load(await res.arrayBuffer());
+
+        const ws = wb.getWorksheet("Rekap Pengiriman") || wb.worksheets[0];
+        if (!ws) {
+          throw new Error("Sheet 'Rekap Pengiriman' tidak ditemukan di template");
+        }
+
+        // Urutan kolom: No | Regional | Nama Toko | Surat Jalan | Tanggal | Koli | Resi
+        // (No Surat Jalan di sebelah Nama Toko, sama seperti tabel web & PDF)
+        const COLUMN_COUNT = 7;
+        ws.getRow(1).getCell(4).value = "No Surat Jalan";
+        ws.getRow(1).getCell(5).value = "Tanggal Pengiriman";
+        const firstStyles = [];
+        const bodyStyles = [];
+        for (let c = 1; c <= COLUMN_COUNT; c++) {
+          firstStyles.push(cloneStyle(ws.getRow(2).getCell(c).style));
+          bodyStyles.push(cloneStyle(ws.getRow(3).getCell(c).style));
+        }
+
+        // Bersihkan isi baris data lama di template.
+        for (let r = 2; r <= ws.rowCount; r++) {
+          for (let c = 1; c <= COLUMN_COUNT; c++) {
+            ws.getRow(r).getCell(c).value = null;
+          }
+        }
+
+        // Satu entri Nama Toko / No Surat Jalan = satu baris, jadi tidak
+        // menumpuk di dalam satu sel. Kolom lain digabung (merge) per data.
+        const MERGED_COLUMNS = [1, 2, 5, 6, 7];
+        let nextRow = 2;
+
+        filtered.forEach(({ item }, i) => {
+          const tokoList = splitCommaList(item.namaToko);
+          const suratJalanList = splitCommaList(item.noSuratJalan);
+          const lineCount = Math.max(1, tokoList.length, suratJalanList.length);
+          const startRow = nextRow;
+          const endRow = startRow + lineCount - 1;
+
+          for (let r = startRow; r <= endRow; r++) {
+            const row = ws.getRow(r);
+            const styles = r === 2 ? firstStyles : bodyStyles;
+            for (let c = 1; c <= COLUMN_COUNT; c++) {
+              row.getCell(c).style = cloneStyle(styles[c - 1]);
+            }
+            row.height = 15.75;
+          }
+
+          for (let r = startRow; r <= endRow; r++) {
+            const row = ws.getRow(r);
+            const offset = r - startRow;
+            row.getCell(3).value = tokoList[offset] ?? "";
+            row.getCell(4).value = suratJalanList[offset] ?? "";
+            // No surat jalan & no resi selalu teks (jangan jadi notasi ilmiah).
+            row.getCell(4).numFmt = "@";
+            row.getCell(7).numFmt = "@";
+          }
+
+          const firstRow = ws.getRow(startRow);
+          firstRow.getCell(1).value = i + 1;
+          firstRow.getCell(2).value = String(item.regional ?? "");
+          firstRow.getCell(5).value = formatTanggal(item.tanggalPengiriman);
+          firstRow.getCell(6).value = Number(item.jumlahKoli) || 0;
+          firstRow.getCell(7).value = String(item.noResi ?? "");
+
+          if (lineCount > 1) {
+            MERGED_COLUMNS.forEach((c) => {
+              ws.mergeCells(startRow, c, endRow, c);
+              const cell = firstRow.getCell(c);
+              cell.alignment = Object.assign({}, cell.alignment, {
+                vertical: "middle",
+              });
+            });
+          }
+
+          nextRow = endRow + 1;
+        });
+
+        // Batasi area cetak ke baris yang berisi data.
+        ws.pageSetup.printArea = `A1:G${nextRow - 1}`;
+
+        const buf = await wb.xlsx.writeBuffer();
+        const today = new Date().toISOString().slice(0, 10);
+        downloadBlob(
+          new Blob([buf], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }),
+          `rekap-pengiriman-${today}.xlsx`
+        );
+      } catch (err) {
+        console.error(err);
+        alert("Gagal membuat file Excel: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    });
+
+    document.getElementById("exportPdfBtn").addEventListener("click", function () {
+      const filtered = getFilteredRecords();
+      if (filtered.length === 0) {
+        alert("Tidak ada data untuk di-export.");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const today = new Date().toISOString().slice(0, 10);
+
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text("REKAP PENGIRIMAN BARANG", 14, 15);
+
+      doc.setFontSize(9.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Tanggal Export: ${formatTanggal(today)} • Jumlah Baris: ${filtered.length}`, 14, 21);
+
+      let totalKoli = 0;
+      const body = filtered.map(({ item }, idx) => {
+        const koli = Number(item.jumlahKoli) || 0;
+        totalKoli += koli;
+        return [
+          String(idx + 1),
+          String(item.regional ?? ""),
+          formatMultilineText(item.namaToko),
+          formatMultilineText(item.noSuratJalan),
+          formatTanggal(item.tanggalPengiriman),
+          String(koli),
+          String(item.noResi ?? ""),
+        ];
+      });
+
+      const totalRowIndex = body.length;
+      body.push(["", "", "", "", "Total Koli", String(totalKoli), ""]);
+
+      doc.autoTable({
+        startY: 26,
+        head: [["No", "Regional", "Nama Toko", "No Surat Jalan", "Tanggal Pengiriman", "Jumlah Koli", "No Resi"]],
+        body,
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+          textColor: [15, 23, 42],
+          valign: "top",
+        },
+        headStyles: {
+          fillColor: [15, 118, 110],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          valign: "middle",
+        },
+        columnStyles: {
+          0: { halign: "center", cellWidth: 12 },
+          1: { cellWidth: 32 },
+          2: { cellWidth: "auto" },
+          3: { cellWidth: 42 },
+          4: { halign: "center", cellWidth: 30 },
+          5: { halign: "right", cellWidth: 22 },
+          6: { cellWidth: 42 },
+        },
+        didParseCell: function (data) {
+          if (data.section === "body" && data.row.index === totalRowIndex) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [241, 245, 249];
+            data.cell.styles.valign = "middle";
+          }
+        },
+      });
+
+      doc.save(`rekap-pengiriman-${today}.pdf`);
+    });
+
+    updateTokoPlaceholder();
+    render();
+    muatDariSheets();
+  </script>
+</body>
+</html>
