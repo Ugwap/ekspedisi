@@ -15,6 +15,491 @@
       --card: #ffffff;
       --surface-alt: #f8fafc;
       --input-bg: #ffffff;
+      --primary: #0f766e;
+      --primary-hover: #115e59;
+      --chip-bg: #ccfbf1;
+      --chip-text: #115e59;
+      --sync-bg: #e0f2fe;
+      --sync-text: #0369a1;
+      --excel: #15803d;
+      --pdf: #dc2626;
+      --warn-bg: #fef3c7;
+      --warn-text: #b45309;
+      --danger-bg: #fee2e2;
+      --danger: #b91c1c;
+      --cancel-bg: #e2e8f0;
+      --cancel-text: #334155;
+      --border: #e2e8f0;
+      --input-border: #cbd5e1;
+      --label-text: #334155;
+      --text: #0f172a;
+      --muted: #64748b;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0b1120;
+      --card: #111827;
+      --surface-alt: #1e293b;
+      --input-bg: #0f172a;
+      --primary: #14b8a6;
+      --primary-hover: #0d9488;
+      --chip-bg: rgba(20, 184, 166, 0.18);
+      --chip-text: #5eead4;
+      --sync-bg: rgba(14, 165, 233, 0.16);
+      --sync-text: #38bdf8;
+      --excel: #16a34a;
+      --pdf: #ef4444;
+      --warn-bg: rgba(245, 158, 11, 0.16);
+      --warn-text: #fbbf24;
+      --danger-bg: rgba(239, 68, 68, 0.16);
+      --danger: #f87171;
+      --cancel-bg: #334155;
+      --cancel-text: #e2e8f0;
+      --border: #1f2937;
+      --input-border: #334155;
+      --label-text: #cbd5e1;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .header-left {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 6px 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.45rem;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      font-size: 1.05rem;
+      flex-shrink: 0;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    .form-group {
+      position: relative;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--label-text);
+      margin-bottom: 5px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 9px 11px;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .toko-sj-panel {
+      grid-column: 1 / -1;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: none;
+    }
+
+    .toko-sj-panel.open {
+      display: block;
+    }
+
+    .toko-sj-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--label-text);
+    }
+
+    .toko-sj-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toko-sj-row {
+      display: grid;
+      grid-template-columns: minmax(170px, 1fr) minmax(200px, 1.3fr) auto;
+      gap: 8px;
+      align-items: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+    }
+
+    @media (max-width: 640px) {
+      .toko-sj-row {
+        grid-template-columns: 1fr auto;
+      }
+      .toko-sj-row .sj-per-toko-input {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .toko-sj-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--chip-text);
+      background: var(--chip-bg);
+      padding: 4px 9px;
+      border-radius: 6px;
+      word-break: break-word;
+    }
+
+    .sj-per-toko-input {
+      width: 100%;
+      padding: 7px 10px;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--input-border);
+      border-radius: 7px;
+      font-size: 0.88rem;
+    }
+
+    .sj-per-toko-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-remove-toko {
+      background: var(--danger-bg);
+      color: var(--danger);
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      border-radius: 7px;
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      max-height: 220px;
+      overflow-y: auto;
+      background: var(--card);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+      z-index: 40;
+      display: none;
+    }
+
+    .autocomplete-list.open {
+      display: block;
+    }
+
+    .autocomplete-item {
+      padding: 8px 11px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.active {
+      background: var(--surface-alt);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .autocomplete-item.picked {
+      background: var(--surface-alt);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .autocomplete-empty {
+      padding: 8px 11px;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    #jumlahKoli::-webkit-outer-spin-button,
+    #jumlahKoli::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    #jumlahKoli[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    :root[data-theme="dark"] input[type="date"] {
+      color-scheme: dark;
+    }
+
+    .form-actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    button:hover:not(:disabled) {
+      opacity: 0.92;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      flex: 1;
+    }
+
+    :root[data-theme="dark"] .btn-primary {
+      color: #062824;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .btn-cancel {
+      background: var(--cancel-bg);
+      color: var(--cancel-text);
+    }
+
+    .btn-sync {
+      background: var(--sync-bg);
+      color: var(--sync-text);
+    }
+
+    .btn-excel {
+      background: var(--excel);
+      color: #ffffff;
+    }
+
+    .btn-pdf {
+      background: var(--pdf);
+      color: #ffffff;
+    }
+
+    .btn-danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    .btn-edit {
+      background: var(--warn-bg);
+      color: var(--warn-text);
+      padding: 5px 9px;
+      font-size: 0.78rem;
+      margin-right: 4px;
+    }
+
+    .btn-del {
+      background: var(--danger-bg);
+      color: var(--danger);
+      padding: 5px 9px;
+      font-size: 0.78rem;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .search-box {
+      min-width: 240px;
+      flex: 1;
+      max-width: 360px;
+      padding: 8px 11px;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      font-size: 0.88rem;
+    }
+
+    .search-box:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.89rem;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    td.toko-col,
+    td.sj-col {
+      white-space: normal;
+      min-width: 165px;
+    }
+
+    .line-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .line-item {
+      line-height: 1.35;
+    }
+
+    th {
+      background: var(--surface-alt);
+      font-weight: 700;
+      color: var(--label-text);
+      vertical-align: middle;
+    }
+
+    tfoot td {
+      background: var(--surface-alt);
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 12px;
+      vertical-align: middle;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.86rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .status-badge {
+      font-size: 0.8rem;
+      font-weight: 600;
       padding: 3px 9px;
       border-radius: 999px;
       background: var(--surface-alt);
@@ -52,4 +537,498 @@
       <form id="pengirimanForm" class="form-grid" autocomplete="off">
         <input type="hidden" id="editIndex" value="" />
         <input type="hidden" id="editId" value="" />
-        
+
+        <div class="form-group">
+          <label for="regionalInput">Regional</label>
+          <input
+            type="text"
+            id="regionalInput"
+            placeholder="Ketik / klik regional..."
+            required
+          />
+          <div class="autocomplete-list" id="regionalSuggestions" role="listbox"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="namaToko">Nama Toko (Bisa Lebih dari 1)</label>
+          <input
+            type="text"
+            id="namaToko"
+            placeholder="Pilih regional dulu..."
+          />
+          <div class="autocomplete-list" id="tokoSuggestions" role="listbox"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="tanggalPengiriman">Tanggal Pengiriman</label>
+          <input type="date" id="tanggalPengiriman" required />
+        </div>
+
+        <div class="form-group">
+          <label for="jumlahKoli">Jumlah Koli</label>
+          <input type="number" id="jumlahKoli" min="1" step="1" placeholder="0" required />
+        </div>
+
+        <div class="form-group">
+          <label for="noResi">No Resi</label>
+          <input type="text" id="noResi" placeholder="Nomor resi" required />
+        </div>
+
+        <div class="toko-sj-panel" id="tokoSjPanel">
+          <div class="toko-sj-header">
+            <span>Daftar Toko &amp; No Surat Jalan per Toko</span>
+            <span id="tokoSjCount">0 toko</span>
+          </div>
+          <div class="toko-sj-list" id="tokoSjList"></div>
+        </div>
+
+        <div class="form-group form-actions">
+          <button type="submit" class="btn-primary" id="submitBtn">+ Simpan</button>
+          <button type="button" class="btn-cancel" id="cancelEditBtn" style="display: none;">Batal</button>
+          <button type="button" class="btn-danger" id="deleteEditBtn" style="display: none;">Hapus</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="meta-row">
+        <div id="summaryBar">Menampilkan 0 dari 0 data • Total Koli: 0</div>
+        <span class="status-badge" id="syncStatus">Menunggu sinkronisasi...</span>
+      </div>
+
+      <div class="toolbar">
+        <input
+          type="search"
+          id="searchInput"
+          class="search-box"
+          placeholder="Cari regional, nama toko, no surat jalan, atau no resi..."
+        />
+        <div class="btn-group">
+          <button type="button" class="btn-sync" id="refreshBtn">↻ Sinkron</button>
+          <button type="button" class="btn-excel" id="exportExcelBtn">Export Excel (.xlsx)</button>
+          <button type="button" class="btn-pdf" id="exportPdfBtn">Export PDF</button>
+          <button type="button" class="btn-danger" id="clearAllBtn">Reset Semua</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Regional</th>
+              <th>Nama Toko</th>
+              <th>No Surat Jalan</th>
+              <th>Tanggal Pengiriman</th>
+              <th>Jumlah Koli</th>
+              <th>No Resi</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="8" class="empty">Belum ada data pengiriman.</td>
+            </tr>
+          </tbody>
+          <tfoot id="tableFoot" style="display: none;">
+            <tr>
+              <td colspan="5" style="text-align: right;">Total Koli</td>
+              <td id="totalKoliCell">0</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMGFCxAuwq7_E2JYeosMkboCxPgjjRB87J-pqsa6FV1ODRiHjF5-KdpdE1o9d5kF0WKw/exec";
+    const STORAGE_KEY = "rekap_pengiriman_sheets_v3";
+    const REGIONAL_CACHE_KEY = "ekspedisi_regional_list_v1";
+    const TOKO_BY_REGIONAL_CACHE_KEY = "ekspedisi_toko_by_regional_v1";
+    const THEME_KEY = "ekspedisi_tema_v1";
+
+    let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    let regionalList = JSON.parse(localStorage.getItem(REGIONAL_CACHE_KEY) || "[]");
+    let tokoByRegional = JSON.parse(localStorage.getItem(TOKO_BY_REGIONAL_CACHE_KEY) || "{}");
+    // Array of { toko: string, suratJalan: string }
+    let selectedTokoEntries = [];
+    let isBusy = false;
+    let activeRegionalIdx = -1;
+    let activeTokoIdx = -1;
+
+    const rootEl = document.documentElement;
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
+    const metaThemeColor = document.getElementById("metaThemeColor");
+    const form = document.getElementById("pengirimanForm");
+    const regionalInput = document.getElementById("regionalInput");
+    const regionalSuggestionsEl = document.getElementById("regionalSuggestions");
+    const namaTokoInput = document.getElementById("namaToko");
+    const tokoSuggestionsEl = document.getElementById("tokoSuggestions");
+    const tokoSjPanelEl = document.getElementById("tokoSjPanel");
+    const tokoSjCountEl = document.getElementById("tokoSjCount");
+    const tokoSjListEl = document.getElementById("tokoSjList");
+    const jumlahKoliInput = document.getElementById("jumlahKoli");
+    const editIndexInput = document.getElementById("editIndex");
+    const editIdInput = document.getElementById("editId");
+    const submitBtn = document.getElementById("submitBtn");
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const deleteEditBtn = document.getElementById("deleteEditBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const clearAllBtn = document.getElementById("clearAllBtn");
+    const searchInput = document.getElementById("searchInput");
+    const tableBody = document.getElementById("tableBody");
+    const tableFoot = document.getElementById("tableFoot");
+    const totalKoliCell = document.getElementById("totalKoliCell");
+    const summaryBar = document.getElementById("summaryBar");
+    const syncStatus = document.getElementById("syncStatus");
+
+    jumlahKoliInput.addEventListener("wheel", function (e) {
+      e.preventDefault();
+    }, { passive: false });
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function splitCommaList(raw) {
+      return String(raw || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    function formatStackHtml(rawText) {
+      const items = splitCommaList(rawText);
+      if (items.length === 0) return "-";
+      return `<div class="line-stack">${items
+        .map((line) => `<div class="line-item">${escapeHtml(line)}</div>`)
+        .join("")}</div>`;
+    }
+
+    function formatMultilineText(rawText) {
+      const items = splitCommaList(rawText);
+      return items.length > 0 ? items.join("\n") : "";
+    }
+
+    function getTokoForRegional(regionalName) {
+      const key = String(regionalName || "").trim().toLowerCase();
+      if (!key) return [];
+      if (Array.isArray(tokoByRegional[key])) {
+        return tokoByRegional[key];
+      }
+      const matchedKey = Object.keys(tokoByRegional).find(
+        (k) => k.includes(key) || key.includes(k)
+      );
+      return matchedKey && Array.isArray(tokoByRegional[matchedKey])
+        ? tokoByRegional[matchedKey]
+        : [];
+    }
+
+    function updateTokoPlaceholder() {
+      const hasReg = String(regionalInput.value || "").trim().length > 0;
+      if (!hasReg) {
+        namaTokoInput.placeholder = "Pilih regional dulu...";
+      } else if (selectedTokoEntries.length > 0) {
+        namaTokoInput.placeholder = "Tambah toko lain di regional ini...";
+      } else {
+        namaTokoInput.placeholder = "Klik / ketik pilih toko...";
+      }
+    }
+
+    function renderTokoSjRows() {
+      tokoSjCountEl.textContent = `${selectedTokoEntries.length} toko`;
+
+      if (selectedTokoEntries.length === 0) {
+        tokoSjPanelEl.classList.remove("open");
+        tokoSjListEl.innerHTML = "";
+        return;
+      }
+
+      tokoSjPanelEl.classList.add("open");
+      tokoSjListEl.innerHTML = selectedTokoEntries
+        .map((entry, idx) => `
+          <div class="toko-sj-row" data-idx="${idx}">
+            <span class="toko-sj-name">${escapeHtml(entry.toko)}</span>
+            <input
+              type="text"
+              class="sj-per-toko-input"
+              placeholder="No surat jalan untuk ${escapeHtml(entry.toko)}"
+              value="${escapeHtml(entry.suratJalan)}"
+              data-idx="${idx}"
+              required
+            />
+            <button
+              type="button"
+              class="btn-remove-toko"
+              title="Hapus toko"
+              aria-label="Hapus ${escapeHtml(entry.toko)}"
+              data-idx="${idx}"
+            >×</button>
+          </div>
+        `)
+        .join("");
+
+      tokoSjListEl.querySelectorAll(".sj-per-toko-input").forEach((inp) => {
+        inp.addEventListener("input", function () {
+          const idx = Number(inp.getAttribute("data-idx"));
+          if (selectedTokoEntries[idx]) {
+            selectedTokoEntries[idx].suratJalan = inp.value;
+          }
+        });
+      });
+
+      tokoSjListEl.querySelectorAll(".btn-remove-toko").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const idx = Number(btn.getAttribute("data-idx"));
+          selectedTokoEntries.splice(idx, 1);
+          renderTokoSjRows();
+          updateTokoPlaceholder();
+          if (tokoSuggestionsEl.classList.contains("open")) {
+            renderTokoSuggestions();
+          }
+        });
+      });
+    }
+
+    function toggleTokoSelection(nama) {
+      const clean = String(nama || "").trim();
+      if (!clean) return;
+      const existingIdx = selectedTokoEntries.findIndex(
+        (e) => e.toko.toLowerCase() === clean.toLowerCase()
+      );
+      if (existingIdx >= 0) {
+        selectedTokoEntries.splice(existingIdx, 1);
+      } else {
+        selectedTokoEntries.push({ toko: clean, suratJalan: "" });
+      }
+      namaTokoInput.value = "";
+      renderTokoSjRows();
+      updateTokoPlaceholder();
+      renderTokoSuggestions();
+
+      if (existingIdx < 0) {
+        const latestSjInput = tokoSjListEl.querySelector(
+          `.sj-per-toko-input[data-idx="${selectedTokoEntries.length - 1}"]`
+        );
+        if (latestSjInput) {
+          closeTokoSuggestions();
+          latestSjInput.focus();
+          return;
+        }
+      }
+      namaTokoInput.focus();
+    }
+
+    function addManualTokoFromInput() {
+      const raw = namaTokoInput.value.trim();
+      if (!raw) return;
+      const parts = splitCommaList(raw);
+      let added = false;
+      parts.forEach((p) => {
+        if (!selectedTokoEntries.some((e) => e.toko.toLowerCase() === p.toLowerCase())) {
+          selectedTokoEntries.push({ toko: p, suratJalan: "" });
+          added = true;
+        }
+      });
+      namaTokoInput.value = "";
+      renderTokoSjRows();
+      updateTokoPlaceholder();
+      renderTokoSuggestions();
+      if (added) {
+        const latestSjInput = tokoSjListEl.querySelector(
+          `.sj-per-toko-input[data-idx="${selectedTokoEntries.length - 1}"]`
+        );
+        if (latestSjInput) {
+          closeTokoSuggestions();
+          latestSjInput.focus();
+        }
+      }
+    }
+
+    function closeRegionalSuggestions() {
+      activeRegionalIdx = -1;
+      regionalSuggestionsEl.classList.remove("open");
+      regionalSuggestionsEl.innerHTML = "";
+    }
+
+    function closeTokoSuggestions() {
+      activeTokoIdx = -1;
+      tokoSuggestionsEl.classList.remove("open");
+      tokoSuggestionsEl.innerHTML = "";
+    }
+
+    function selectRegional(nama) {
+      const prevKey = regionalInput.value.trim().toLowerCase();
+      const nextKey = String(nama || "").trim().toLowerCase();
+      regionalInput.value = nama;
+      if (prevKey !== nextKey) {
+        selectedTokoEntries = [];
+        namaTokoInput.value = "";
+        renderTokoSjRows();
+      }
+      updateTokoPlaceholder();
+      closeRegionalSuggestions();
+      namaTokoInput.focus();
+      renderTokoSuggestions();
+    }
+
+    function getMatchingRegional(query) {
+      const q = String(query || "").trim().toLowerCase();
+      if (!q) return regionalList.slice(0, 30);
+      return regionalList.filter((nama) => nama.toLowerCase().includes(q)).slice(0, 30);
+    }
+
+    function renderRegionalSuggestions() {
+      const matches = getMatchingRegional(regionalInput.value);
+      activeRegionalIdx = -1;
+
+      if (regionalList.length === 0) {
+        regionalSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Belum ada regional di sheet "daftar toko" kolom A. Ketik manual tetap bisa.</div>`;
+        regionalSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      if (matches.length === 0) {
+        regionalSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Regional tidak ditemukan. Tetap bisa pakai ketikan manual.</div>`;
+        regionalSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      regionalSuggestionsEl.innerHTML = matches
+        .map((nama, idx) => `<div class="autocomplete-item" role="option" data-idx="${idx}" data-value="${escapeHtml(nama)}">${escapeHtml(nama)}</div>`)
+        .join("");
+
+      regionalSuggestionsEl.querySelectorAll(".autocomplete-item").forEach((el) => {
+        el.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          selectRegional(el.getAttribute("data-value") || "");
+        });
+      });
+
+      regionalSuggestionsEl.classList.add("open");
+    }
+
+    function getMatchingToko(query) {
+      const regToko = getTokoForRegional(regionalInput.value);
+      const q = String(query || "").trim().toLowerCase();
+      if (!q) return regToko.slice(0, 40);
+      return regToko.filter((nama) => nama.toLowerCase().includes(q)).slice(0, 40);
+    }
+
+    function renderTokoSuggestions() {
+      const regVal = String(regionalInput.value || "").trim();
+      activeTokoIdx = -1;
+
+      if (!regVal) {
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Pilih atau ketik Regional terlebih dahulu.</div>`;
+        tokoSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      const regToko = getTokoForRegional(regVal);
+      if (regToko.length === 0) {
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Belum ada toko terdaftar di "${escapeHtml(regVal)}". Ketik nama toko lalu tekan Enter.</div>`;
+        tokoSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      const matches = getMatchingToko(namaTokoInput.value);
+      if (matches.length === 0) {
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Tidak cocok di daftar. Tekan Enter untuk menambahkan sebagai toko manual.</div>`;
+        tokoSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      tokoSuggestionsEl.innerHTML = matches
+        .map((nama, idx) => {
+          const isPicked = selectedTokoEntries.some(
+            (e) => e.toko.toLowerCase() === nama.toLowerCase()
+          );
+          return `
+            <div class="autocomplete-item ${isPicked ? "picked" : ""}" role="option" data-idx="${idx}" data-value="${escapeHtml(nama)}">
+              <span>${escapeHtml(nama)}</span>
+              <span>${isPicked ? "✓" : "+"}</span>
+            </div>
+          `;
+        })
+        .join("");
+
+      tokoSuggestionsEl.querySelectorAll(".autocomplete-item").forEach((el) => {
+        el.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          toggleTokoSelection(el.getAttribute("data-value") || "");
+        });
+      });
+
+      tokoSuggestionsEl.classList.add("open");
+    }
+
+    regionalInput.addEventListener("input", function () {
+      updateTokoPlaceholder();
+      renderRegionalSuggestions();
+    });
+
+    regionalInput.addEventListener("focus", function () {
+      closeTokoSuggestions();
+      renderRegionalSuggestions();
+    });
+
+    regionalInput.addEventListener("keydown", function (e) {
+      if (!regionalSuggestionsEl.classList.contains("open")) return;
+      const items = regionalSuggestionsEl.querySelectorAll(".autocomplete-item");
+      if (!items.length) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        activeRegionalIdx = (activeRegionalIdx + 1) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === activeRegionalIdx));
+        items[activeRegionalIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        activeRegionalIdx = (activeRegionalIdx - 1 + items.length) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === activeRegionalIdx));
+        items[activeRegionalIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter" && activeRegionalIdx >= 0) {
+        e.preventDefault();
+        selectRegional(items[activeRegionalIdx].getAttribute("data-value") || "");
+      } else if (e.key === "Escape") {
+        closeRegionalSuggestions();
+      }
+    });
+
+    namaTokoInput.addEventListener("input", function () {
+      if (namaTokoInput.value.includes(",")) {
+        addManualTokoFromInput();
+        return;
+      }
+      renderTokoSuggestions();
+    });
+
+    namaTokoInput.addEventListener("focus", function () {
+      closeRegionalSuggestions();
+      renderTokoSuggestions();
+    });
+
+    namaTokoInput.addEventListener("click", function () {
+      closeRegionalSuggestions();
+      renderTokoSuggestions();
+    });
+
+    namaTokoInput.addEventListener("keydown", function (e) {
+      const items = tokoSuggestionsEl.classList.contains("open")
+        ? tokoSuggestionsEl.querySelectorAll(".autocomplete-item")
+        : [];
+
+      if (e.key === "ArrowDown" && items.length) {
+        e.preventDefault();
+        activeTokoIdx = (activeTokoIdx + 1) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === activeTokoIdx));
+        items[activeTokoIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "ArrowUp" && items.length) {
+        e.preventDefault();
+        activeTokoIdx = (activeTokoIdx - 1 + items.length) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i
