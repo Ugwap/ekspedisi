@@ -1474,47 +1474,59 @@
           }
         }
 
+        // Satu entri Nama Toko / No Surat Jalan = satu baris, jadi tidak
+        // menumpuk di dalam satu sel. Kolom lain digabung (merge) per data.
+        const MERGED_COLUMNS = [1, 2, 4, 6, 7];
+        let nextRow = 2;
+
         filtered.forEach(({ item }, i) => {
-          const r = i + 2;
-          const row = ws.getRow(r);
-          const styles = i === 0 ? firstStyles : bodyStyles;
-          for (let c = 1; c <= COLUMN_COUNT; c++) {
-            row.getCell(c).style = cloneStyle(styles[c - 1]);
+          const tokoList = splitCommaList(item.namaToko);
+          const suratJalanList = splitCommaList(item.noSuratJalan);
+          const lineCount = Math.max(1, tokoList.length, suratJalanList.length);
+          const startRow = nextRow;
+          const endRow = startRow + lineCount - 1;
+
+          for (let r = startRow; r <= endRow; r++) {
+            const row = ws.getRow(r);
+            const styles = r === 2 ? firstStyles : bodyStyles;
+            for (let c = 1; c <= COLUMN_COUNT; c++) {
+              row.getCell(c).style = cloneStyle(styles[c - 1]);
+            }
+            row.height = 15.75;
           }
 
-          const namaToko = formatMultilineText(item.namaToko);
-          const noSuratJalan = formatMultilineText(item.noSuratJalan);
-          const lineCount = Math.max(
-            1,
-            splitCommaList(item.namaToko).length,
-            splitCommaList(item.noSuratJalan).length
-          );
+          for (let r = startRow; r <= endRow; r++) {
+            const row = ws.getRow(r);
+            const offset = r - startRow;
+            row.getCell(3).value = tokoList[offset] ?? "";
+            row.getCell(5).value = suratJalanList[offset] ?? "";
+            // No surat jalan & no resi selalu teks (jangan jadi notasi ilmiah).
+            row.getCell(5).numFmt = "@";
+            row.getCell(7).numFmt = "@";
+          }
 
-          row.getCell(1).value = i + 1;
-          row.getCell(2).value = String(item.regional ?? "");
-          row.getCell(3).value = namaToko;
-          row.getCell(4).value = formatTanggal(item.tanggalPengiriman);
-          row.getCell(5).value = noSuratJalan;
-          row.getCell(6).value = Number(item.jumlahKoli) || 0;
-          row.getCell(7).value = String(item.noResi ?? "");
+          const firstRow = ws.getRow(startRow);
+          firstRow.getCell(1).value = i + 1;
+          firstRow.getCell(2).value = String(item.regional ?? "");
+          firstRow.getCell(4).value = formatTanggal(item.tanggalPengiriman);
+          firstRow.getCell(6).value = Number(item.jumlahKoli) || 0;
+          firstRow.getCell(7).value = String(item.noResi ?? "");
 
-          // Nama toko & no surat jalan bisa berisi beberapa baris.
-          row.getCell(3).alignment = Object.assign({}, row.getCell(3).alignment, {
-            wrapText: true,
-            vertical: "top",
-          });
-          row.getCell(5).alignment = Object.assign({}, row.getCell(5).alignment, {
-            wrapText: true,
-            vertical: "top",
-          });
-          // No surat jalan & no resi selalu teks (jangan jadi notasi ilmiah).
-          row.getCell(5).numFmt = "@";
-          row.getCell(7).numFmt = "@";
-          row.height = Math.max(15.75, lineCount * 15);
+          if (lineCount > 1) {
+            MERGED_COLUMNS.forEach((c) => {
+              ws.mergeCells(startRow, c, endRow, c);
+              const cell = firstRow.getCell(c);
+              cell.alignment = Object.assign({}, cell.alignment, {
+                vertical: "middle",
+              });
+            });
+          }
+
+          nextRow = endRow + 1;
         });
 
         // Batasi area cetak ke baris yang berisi data.
-        ws.pageSetup.printArea = `A1:G${filtered.length + 1}`;
+        ws.pageSetup.printArea = `A1:G${nextRow - 1}`;
 
         const buf = await wb.xlsx.writeBuffer();
         const today = new Date().toISOString().slice(0, 10);
