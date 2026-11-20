@@ -17,6 +17,8 @@
       --input-bg: #ffffff;
       --primary: #0f766e;
       --primary-hover: #115e59;
+      --chip-bg: #ccfbf1;
+      --chip-text: #115e59;
       --sync-bg: #e0f2fe;
       --sync-text: #0369a1;
       --excel: #15803d;
@@ -42,6 +44,8 @@
       --input-bg: #0f172a;
       --primary: #14b8a6;
       --primary-hover: #0d9488;
+      --chip-bg: rgba(20, 184, 166, 0.18);
+      --chip-text: #5eead4;
       --sync-bg: rgba(14, 165, 233, 0.16);
       --sync-text: #38bdf8;
       --excel: #16a34a;
@@ -159,6 +163,43 @@
       font-size: 0.9rem;
     }
 
+    .selected-toko-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .selected-toko-list:empty {
+      display: none;
+    }
+
+    .toko-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--chip-bg);
+      color: var(--chip-text);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .toko-chip button {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      font-size: 0.85rem;
+      line-height: 1;
+      border-radius: 999px;
+      width: 15px;
+      height: 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .autocomplete-list {
       position: absolute;
       top: calc(100% + 4px);
@@ -184,6 +225,10 @@
       cursor: pointer;
       color: var(--text);
       border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
     }
 
     .autocomplete-item:last-child {
@@ -192,6 +237,12 @@
 
     .autocomplete-item:hover,
     .autocomplete-item.active {
+      background: var(--surface-alt);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .autocomplete-item.picked {
       background: var(--surface-alt);
       color: var(--primary);
       font-weight: 600;
@@ -431,13 +482,13 @@
         </div>
 
         <div class="form-group">
-          <label for="namaToko">Nama Toko</label>
+          <label for="namaToko">Nama Toko (Bisa Lebih dari 1)</label>
           <input
             type="text"
             id="namaToko"
             placeholder="Pilih regional dulu..."
-            required
           />
+          <div class="selected-toko-list" id="selectedTokoChips"></div>
           <div class="autocomplete-list" id="tokoSuggestions" role="listbox"></div>
         </div>
 
@@ -530,6 +581,7 @@
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     let regionalList = JSON.parse(localStorage.getItem(REGIONAL_CACHE_KEY) || "[]");
     let tokoByRegional = JSON.parse(localStorage.getItem(TOKO_BY_REGIONAL_CACHE_KEY) || "{}");
+    let selectedTokoList = [];
     let isBusy = false;
     let activeRegionalIdx = -1;
     let activeTokoIdx = -1;
@@ -541,6 +593,7 @@
     const regionalInput = document.getElementById("regionalInput");
     const regionalSuggestionsEl = document.getElementById("regionalSuggestions");
     const namaTokoInput = document.getElementById("namaToko");
+    const selectedTokoChipsEl = document.getElementById("selectedTokoChips");
     const tokoSuggestionsEl = document.getElementById("tokoSuggestions");
     const jumlahKoliInput = document.getElementById("jumlahKoli");
     const editIndexInput = document.getElementById("editIndex");
@@ -582,9 +635,74 @@
 
     function updateTokoPlaceholder() {
       const hasReg = String(regionalInput.value || "").trim().length > 0;
-      namaTokoInput.placeholder = hasReg
-        ? "Klik / ketik nama toko di regional ini..."
-        : "Pilih regional dulu...";
+      if (!hasReg) {
+        namaTokoInput.placeholder = "Pilih regional dulu...";
+      } else if (selectedTokoList.length > 0) {
+        namaTokoInput.placeholder = "Tambah toko lain di regional ini...";
+      } else {
+        namaTokoInput.placeholder = "Klik / ketik pilih toko...";
+      }
+    }
+
+    function renderSelectedTokoChips() {
+      selectedTokoChipsEl.innerHTML = selectedTokoList
+        .map((nama, idx) => `
+          <span class="toko-chip">
+            <span>${escapeHtml(nama)}</span>
+            <button type="button" title="Hapus toko" aria-label="Hapus ${escapeHtml(nama)}" data-idx="${idx}">×</button>
+          </span>
+        `)
+        .join("");
+
+      selectedTokoChipsEl.querySelectorAll("button").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const idx = Number(btn.getAttribute("data-idx"));
+          selectedTokoList.splice(idx, 1);
+          renderSelectedTokoChips();
+          updateTokoPlaceholder();
+          if (tokoSuggestionsEl.classList.contains("open")) {
+            renderTokoSuggestions();
+          }
+        });
+      });
+    }
+
+    function toggleTokoSelection(nama) {
+      const clean = String(nama || "").trim();
+      if (!clean) return;
+      const existingIdx = selectedTokoList.findIndex(
+        (t) => t.toLowerCase() === clean.toLowerCase()
+      );
+      if (existingIdx >= 0) {
+        selectedTokoList.splice(existingIdx, 1);
+      } else {
+        selectedTokoList.push(clean);
+      }
+      namaTokoInput.value = "";
+      renderSelectedTokoChips();
+      updateTokoPlaceholder();
+      renderTokoSuggestions();
+      namaTokoInput.focus();
+    }
+
+    function addManualTokoFromInput() {
+      const raw = namaTokoInput.value.trim();
+      if (!raw) return;
+      const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+      parts.forEach((p) => {
+        if (!selectedTokoList.some((t) => t.toLowerCase() === p.toLowerCase())) {
+          selectedTokoList.push(p);
+        }
+      });
+      namaTokoInput.value = "";
+      renderSelectedTokoChips();
+      updateTokoPlaceholder();
+      renderTokoSuggestions();
+    }
+
+    function getFinalTokoString() {
+      addManualTokoFromInput();
+      return selectedTokoList.join(", ");
     }
 
     function closeRegionalSuggestions() {
@@ -604,7 +722,9 @@
       const nextKey = String(nama || "").trim().toLowerCase();
       regionalInput.value = nama;
       if (prevKey !== nextKey) {
+        selectedTokoList = [];
         namaTokoInput.value = "";
+        renderSelectedTokoChips();
       }
       updateTokoPlaceholder();
       closeRegionalSuggestions();
@@ -648,16 +768,11 @@
       regionalSuggestionsEl.classList.add("open");
     }
 
-    function selectToko(nama) {
-      namaTokoInput.value = nama;
-      closeTokoSuggestions();
-    }
-
     function getMatchingToko(query) {
       const regToko = getTokoForRegional(regionalInput.value);
       const q = String(query || "").trim().toLowerCase();
-      if (!q) return regToko.slice(0, 30);
-      return regToko.filter((nama) => nama.toLowerCase().includes(q)).slice(0, 30);
+      if (!q) return regToko.slice(0, 40);
+      return regToko.filter((nama) => nama.toLowerCase().includes(q)).slice(0, 40);
     }
 
     function renderTokoSuggestions() {
@@ -672,26 +787,34 @@
 
       const regToko = getTokoForRegional(regVal);
       if (regToko.length === 0) {
-        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Belum ada toko terdaftar untuk regional "${escapeHtml(regVal)}". Ketik manual tetap bisa.</div>`;
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Belum ada toko terdaftar di "${escapeHtml(regVal)}". Ketik nama toko lalu tekan Enter.</div>`;
         tokoSuggestionsEl.classList.add("open");
         return;
       }
 
       const matches = getMatchingToko(namaTokoInput.value);
       if (matches.length === 0) {
-        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Toko tidak cocok di regional ini. Ketik manual tetap bisa.</div>`;
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Tidak cocok di daftar. Tekan Enter untuk menambahkan sebagai toko manual.</div>`;
         tokoSuggestionsEl.classList.add("open");
         return;
       }
 
       tokoSuggestionsEl.innerHTML = matches
-        .map((nama, idx) => `<div class="autocomplete-item" role="option" data-idx="${idx}" data-value="${escapeHtml(nama)}">${escapeHtml(nama)}</div>`)
+        .map((nama, idx) => {
+          const isPicked = selectedTokoList.some((t) => t.toLowerCase() === nama.toLowerCase());
+          return `
+            <div class="autocomplete-item ${isPicked ? "picked" : ""}" role="option" data-idx="${idx}" data-value="${escapeHtml(nama)}">
+              <span>${escapeHtml(nama)}</span>
+              <span>${isPicked ? "✓" : "+"}</span>
+            </div>
+          `;
+        })
         .join("");
 
       tokoSuggestionsEl.querySelectorAll(".autocomplete-item").forEach((el) => {
         el.addEventListener("mousedown", function (e) {
           e.preventDefault();
-          selectToko(el.getAttribute("data-value") || "");
+          toggleTokoSelection(el.getAttribute("data-value") || "");
         });
       });
 
@@ -731,34 +854,47 @@
       }
     });
 
-    namaTokoInput.addEventListener("input", renderTokoSuggestions);
+    namaTokoInput.addEventListener("input", function () {
+      if (namaTokoInput.value.includes(",")) {
+        addManualTokoFromInput();
+        return;
+      }
+      renderTokoSuggestions();
+    });
+
     namaTokoInput.addEventListener("focus", function () {
       closeRegionalSuggestions();
       renderTokoSuggestions();
     });
+
     namaTokoInput.addEventListener("click", function () {
       closeRegionalSuggestions();
       renderTokoSuggestions();
     });
 
     namaTokoInput.addEventListener("keydown", function (e) {
-      if (!tokoSuggestionsEl.classList.contains("open")) return;
-      const items = tokoSuggestionsEl.querySelectorAll(".autocomplete-item");
-      if (!items.length) return;
+      const items = tokoSuggestionsEl.classList.contains("open")
+        ? tokoSuggestionsEl.querySelectorAll(".autocomplete-item")
+        : [];
 
-      if (e.key === "ArrowDown") {
+      if (e.key === "ArrowDown" && items.length) {
         e.preventDefault();
         activeTokoIdx = (activeTokoIdx + 1) % items.length;
         items.forEach((el, i) => el.classList.toggle("active", i === activeTokoIdx));
         items[activeTokoIdx].scrollIntoView({ block: "nearest" });
-      } else if (e.key === "ArrowUp") {
+      } else if (e.key === "ArrowUp" && items.length) {
         e.preventDefault();
         activeTokoIdx = (activeTokoIdx - 1 + items.length) % items.length;
         items.forEach((el, i) => el.classList.toggle("active", i === activeTokoIdx));
         items[activeTokoIdx].scrollIntoView({ block: "nearest" });
-      } else if (e.key === "Enter" && activeTokoIdx >= 0) {
-        e.preventDefault();
-        selectToko(items[activeTokoIdx].getAttribute("data-value") || "");
+      } else if (e.key === "Enter") {
+        if (activeTokoIdx >= 0 && items[activeTokoIdx]) {
+          e.preventDefault();
+          toggleTokoSelection(items[activeTokoIdx].getAttribute("data-value") || "");
+        } else if (namaTokoInput.value.trim()) {
+          e.preventDefault();
+          addManualTokoFromInput();
+        }
       } else if (e.key === "Escape") {
         closeTokoSuggestions();
       }
@@ -768,7 +904,11 @@
       if (!e.target.closest("#regionalInput") && !e.target.closest("#regionalSuggestions")) {
         closeRegionalSuggestions();
       }
-      if (!e.target.closest("#namaToko") && !e.target.closest("#tokoSuggestions")) {
+      if (
+        !e.target.closest("#namaToko") &&
+        !e.target.closest("#tokoSuggestions") &&
+        !e.target.closest("#selectedTokoChips")
+      ) {
         closeTokoSuggestions();
       }
     });
@@ -923,7 +1063,9 @@
       submitBtn.textContent = "+ Simpan";
       cancelEditBtn.style.display = "none";
       regionalInput.value = "";
+      selectedTokoList = [];
       namaTokoInput.value = "";
+      renderSelectedTokoChips();
       document.getElementById("noSuratJalan").value = "";
       jumlahKoliInput.value = "";
       document.getElementById("noResi").value = "";
@@ -991,7 +1133,12 @@
       editIndexInput.value = String(index);
       editIdInput.value = item.id || "";
       regionalInput.value = item.regional || "";
-      namaTokoInput.value = item.namaToko || "";
+      selectedTokoList = String(item.namaToko || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      namaTokoInput.value = "";
+      renderSelectedTokoChips();
       document.getElementById("tanggalPengiriman").value = item.tanggalPengiriman;
       document.getElementById("noSuratJalan").value = item.noSuratJalan;
       jumlahKoliInput.value = item.jumlahKoli;
@@ -1038,13 +1185,20 @@
       e.preventDefault();
       if (isBusy) return;
 
+      const finalToko = getFinalTokoString();
+      if (!finalToko) {
+        alert("Pilih atau isi minimal satu Nama Toko terlebih dahulu.");
+        namaTokoInput.focus();
+        return;
+      }
+
       const editIdx = editIndexInput.value;
       const existingId = editIdInput.value || createId();
 
       const entry = {
         id: existingId,
         regional: regionalInput.value.trim(),
-        namaToko: namaTokoInput.value.trim(),
+        namaToko: finalToko,
         tanggalPengiriman: document.getElementById("tanggalPengiriman").value,
         noSuratJalan: document.getElementById("noSuratJalan").value.trim(),
         jumlahKoli: parseInt(jumlahKoliInput.value, 10) || 0,
