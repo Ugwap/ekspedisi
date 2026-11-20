@@ -398,24 +398,43 @@
       padding: 10px 12px;
       border-bottom: 1px solid var(--border);
       text-align: left;
+      vertical-align: top;
       white-space: nowrap;
+    }
+
+    td.toko-col {
+      white-space: normal;
+      min-width: 170px;
+    }
+
+    .toko-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .toko-line {
+      line-height: 1.35;
     }
 
     th {
       background: var(--surface-alt);
       font-weight: 700;
       color: var(--label-text);
+      vertical-align: middle;
     }
 
     tfoot td {
       background: var(--surface-alt);
       font-weight: 700;
+      vertical-align: middle;
     }
 
     .empty {
       text-align: center;
       color: var(--muted);
       padding: 28px 12px;
+      vertical-align: middle;
     }
 
     .meta-row {
@@ -617,6 +636,26 @@
       const div = document.createElement("div");
       div.textContent = str ?? "";
       return div.innerHTML;
+    }
+
+    function splitTokoList(rawToko) {
+      return String(rawToko || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    function formatTokoStackHtml(rawToko) {
+      const items = splitTokoList(rawToko);
+      if (items.length === 0) return "-";
+      return `<div class="toko-stack">${items
+        .map((toko) => `<div class="toko-line">${escapeHtml(toko)}</div>`)
+        .join("")}</div>`;
+    }
+
+    function formatTokoMultilineText(rawToko) {
+      const items = splitTokoList(rawToko);
+      return items.length > 0 ? items.join("\n") : "";
     }
 
     function getTokoForRegional(regionalName) {
@@ -1037,7 +1076,7 @@
             <tr>
               <td>${i + 1}</td>
               <td>${escapeHtml(item.regional)}</td>
-              <td>${escapeHtml(item.namaToko)}</td>
+              <td class="toko-col">${formatTokoStackHtml(item.namaToko)}</td>
               <td>${formatTanggal(item.tanggalPengiriman)}</td>
               <td>${escapeHtml(item.noSuratJalan)}</td>
               <td>${koli}</td>
@@ -1133,10 +1172,7 @@
       editIndexInput.value = String(index);
       editIdInput.value = item.id || "";
       regionalInput.value = item.regional || "";
-      selectedTokoList = String(item.namaToko || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      selectedTokoList = splitTokoList(item.namaToko);
       namaTokoInput.value = "";
       renderSelectedTokoChips();
       document.getElementById("tanggalPengiriman").value = item.tanggalPengiriman;
@@ -1277,7 +1313,7 @@
         return [
           idx + 1,
           String(item.regional ?? ""),
-          String(item.namaToko ?? ""),
+          formatTokoMultilineText(item.namaToko),
           formatTanggal(item.tanggalPengiriman),
           String(item.noSuratJalan ?? ""),
           koli,
@@ -1290,7 +1326,12 @@
       const ws = XLSX.utils.aoa_to_sheet(aoa);
 
       const totalDataRows = dataRows.length;
+      ws["!rows"] = [{ hpt: 22 }];
       for (let r = 1; r <= totalDataRows; r++) {
+        const tokoCell = ws[XLSX.utils.encode_cell({ r, c: 2 })];
+        if (tokoCell) {
+          tokoCell.s = { alignment: { wrapText: true, vertical: "top" } };
+        }
         const sjCell = ws[XLSX.utils.encode_cell({ r, c: 4 })];
         if (sjCell) {
           sjCell.t = "s";
@@ -1301,12 +1342,14 @@
           resiCell.t = "s";
           resiCell.z = "@";
         }
+        const tokoCount = Math.max(1, splitTokoList(dataRows[r - 1][2]).length);
+        ws["!rows"][r] = { hpt: Math.max(20, tokoCount * 15) };
       }
 
       ws["!cols"] = [
         { wch: 6 },
         { wch: 20 },
-        { wch: 28 },
+        { wch: 30 },
         { wch: 20 },
         { wch: 20 },
         { wch: 14 },
@@ -1346,7 +1389,7 @@
         return [
           String(idx + 1),
           String(item.regional ?? ""),
-          String(item.namaToko ?? ""),
+          formatTokoMultilineText(item.namaToko),
           formatTanggal(item.tanggalPengiriman),
           String(item.noSuratJalan ?? ""),
           String(koli),
@@ -1365,11 +1408,13 @@
           fontSize: 9,
           cellPadding: 3,
           textColor: [15, 23, 42],
+          valign: "top",
         },
         headStyles: {
           fillColor: [15, 118, 110],
           textColor: [255, 255, 255],
           fontStyle: "bold",
+          valign: "middle",
         },
         columnStyles: {
           0: { halign: "center", cellWidth: 12 },
@@ -1384,6 +1429,7 @@
           if (data.section === "body" && data.row.index === totalRowIndex) {
             data.cell.styles.fontStyle = "bold";
             data.cell.styles.fillColor = [241, 245, 249];
+            data.cell.styles.valign = "middle";
           }
         },
       });
