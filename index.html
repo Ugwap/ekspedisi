@@ -17,6 +17,8 @@
       --input-bg: #ffffff;
       --primary: #0f766e;
       --primary-hover: #115e59;
+      --chip-bg: #ccfbf1;
+      --chip-text: #115e59;
       --sync-bg: #e0f2fe;
       --sync-text: #0369a1;
       --excel: #15803d;
@@ -42,6 +44,8 @@
       --input-bg: #0f172a;
       --primary: #14b8a6;
       --primary-hover: #0d9488;
+      --chip-bg: rgba(20, 184, 166, 0.18);
+      --chip-text: #5eead4;
       --sync-bg: rgba(14, 165, 233, 0.16);
       --sync-text: #38bdf8;
       --excel: #16a34a;
@@ -74,7 +78,7 @@
     }
 
     .container {
-      max-width: 1140px;
+      max-width: 1180px;
       margin: 0 auto;
     }
 
@@ -132,7 +136,7 @@
 
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
       gap: 12px;
       align-items: end;
     }
@@ -159,12 +163,95 @@
       font-size: 0.9rem;
     }
 
+    .toko-sj-panel {
+      grid-column: 1 / -1;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: none;
+    }
+
+    .toko-sj-panel.open {
+      display: block;
+    }
+
+    .toko-sj-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--label-text);
+    }
+
+    .toko-sj-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toko-sj-row {
+      display: grid;
+      grid-template-columns: minmax(170px, 1fr) minmax(200px, 1.3fr) auto;
+      gap: 8px;
+      align-items: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+    }
+
+    @media (max-width: 640px) {
+      .toko-sj-row {
+        grid-template-columns: 1fr auto;
+      }
+      .toko-sj-row .sj-per-toko-input {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .toko-sj-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--chip-text);
+      background: var(--chip-bg);
+      padding: 4px 9px;
+      border-radius: 6px;
+      word-break: break-word;
+    }
+
+    .sj-per-toko-input {
+      width: 100%;
+      padding: 7px 10px;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--input-border);
+      border-radius: 7px;
+      font-size: 0.88rem;
+    }
+
+    .sj-per-toko-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-remove-toko {
+      background: var(--danger-bg);
+      color: var(--danger);
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      border-radius: 7px;
+    }
+
     .autocomplete-list {
       position: absolute;
       top: calc(100% + 4px);
       left: 0;
       right: 0;
-      max-height: 210px;
+      max-height: 220px;
       overflow-y: auto;
       background: var(--card);
       border: 1px solid var(--input-border);
@@ -184,6 +271,10 @@
       cursor: pointer;
       color: var(--text);
       border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
     }
 
     .autocomplete-item:last-child {
@@ -192,6 +283,12 @@
 
     .autocomplete-item:hover,
     .autocomplete-item.active {
+      background: var(--surface-alt);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .autocomplete-item.picked {
       background: var(--surface-alt);
       color: var(--primary);
       font-weight: 600;
@@ -313,7 +410,7 @@
     .search-box {
       min-width: 240px;
       flex: 1;
-      max-width: 340px;
+      max-width: 360px;
       padding: 8px 11px;
       background: var(--input-bg);
       color: var(--text);
@@ -347,24 +444,44 @@
       padding: 10px 12px;
       border-bottom: 1px solid var(--border);
       text-align: left;
+      vertical-align: top;
       white-space: nowrap;
+    }
+
+    td.toko-col,
+    td.sj-col {
+      white-space: normal;
+      min-width: 165px;
+    }
+
+    .line-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .line-item {
+      line-height: 1.35;
     }
 
     th {
       background: var(--surface-alt);
       font-weight: 700;
       color: var(--label-text);
+      vertical-align: middle;
     }
 
     tfoot td {
       background: var(--surface-alt);
       font-weight: 700;
+      vertical-align: middle;
     }
 
     .empty {
       text-align: center;
       color: var(--muted);
       padding: 28px 12px;
+      vertical-align: middle;
     }
 
     .meta-row {
@@ -420,12 +537,22 @@
         <input type="hidden" id="editId" value="" />
 
         <div class="form-group">
-          <label for="namaToko">Nama Toko</label>
+          <label for="regionalInput">Regional</label>
+          <input
+            type="text"
+            id="regionalInput"
+            placeholder="Ketik / klik regional..."
+            required
+          />
+          <div class="autocomplete-list" id="regionalSuggestions" role="listbox"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="namaToko">Nama Toko (Bisa Lebih dari 1)</label>
           <input
             type="text"
             id="namaToko"
-            placeholder="Ketik sebagian nama toko..."
-            required
+            placeholder="Pilih regional dulu..."
           />
           <div class="autocomplete-list" id="tokoSuggestions" role="listbox"></div>
         </div>
@@ -433,11 +560,6 @@
         <div class="form-group">
           <label for="tanggalPengiriman">Tanggal Pengiriman</label>
           <input type="date" id="tanggalPengiriman" required />
-        </div>
-
-        <div class="form-group">
-          <label for="noSuratJalan">No Surat Jalan</label>
-          <input type="text" id="noSuratJalan" placeholder="Nomor surat jalan" required />
         </div>
 
         <div class="form-group">
@@ -454,6 +576,14 @@
           <button type="submit" class="btn-primary" id="submitBtn">+ Simpan</button>
           <button type="button" class="btn-cancel" id="cancelEditBtn" style="display: none;">Batal</button>
         </div>
+
+        <div class="toko-sj-panel" id="tokoSjPanel">
+          <div class="toko-sj-header">
+            <span>Daftar Toko &amp; No Surat Jalan per Toko</span>
+            <span id="tokoSjCount">0 toko</span>
+          </div>
+          <div class="toko-sj-list" id="tokoSjList"></div>
+        </div>
       </form>
     </div>
 
@@ -468,7 +598,7 @@
           type="search"
           id="searchInput"
           class="search-box"
-          placeholder="Cari nama toko, no surat jalan, atau no resi..."
+          placeholder="Cari regional, nama toko, no surat jalan, atau no resi..."
         />
         <div class="btn-group">
           <button type="button" class="btn-sync" id="refreshBtn">↻ Sinkron</button>
@@ -483,9 +613,10 @@
           <thead>
             <tr>
               <th>No</th>
+              <th>Regional</th>
               <th>Nama Toko</th>
-              <th>Tanggal Pengiriman</th>
               <th>No Surat Jalan</th>
+              <th>Tanggal Pengiriman</th>
               <th>Jumlah Koli</th>
               <th>No Resi</th>
               <th>Aksi</th>
@@ -493,12 +624,12 @@
           </thead>
           <tbody id="tableBody">
             <tr>
-              <td colspan="7" class="empty">Belum ada data pengiriman.</td>
+              <td colspan="8" class="empty">Belum ada data pengiriman.</td>
             </tr>
           </tbody>
           <tfoot id="tableFoot" style="display: none;">
             <tr>
-              <td colspan="4" style="text-align: right;">Total Koli</td>
+              <td colspan="5" style="text-align: right;">Total Koli</td>
               <td id="totalKoliCell">0</td>
               <td colspan="2"></td>
             </tr>
@@ -510,21 +641,31 @@
 
   <script>
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMGFCxAuwq7_E2JYeosMkboCxPgjjRB87J-pqsa6FV1ODRiHjF5-KdpdE1o9d5kF0WKw/exec";
-    const STORAGE_KEY = "rekap_pengiriman_sheets_v1";
-    const TOKO_CACHE_KEY = "ekspedisi_daftar_toko_v1";
+    const STORAGE_KEY = "rekap_pengiriman_sheets_v3";
+    const REGIONAL_CACHE_KEY = "ekspedisi_regional_list_v1";
+    const TOKO_BY_REGIONAL_CACHE_KEY = "ekspedisi_toko_by_regional_v1";
     const THEME_KEY = "ekspedisi_tema_v1";
 
     let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    let daftarToko = JSON.parse(localStorage.getItem(TOKO_CACHE_KEY) || "[]");
+    let regionalList = JSON.parse(localStorage.getItem(REGIONAL_CACHE_KEY) || "[]");
+    let tokoByRegional = JSON.parse(localStorage.getItem(TOKO_BY_REGIONAL_CACHE_KEY) || "{}");
+    // Array of { toko: string, suratJalan: string }
+    let selectedTokoEntries = [];
     let isBusy = false;
-    let activeSuggestionIdx = -1;
+    let activeRegionalIdx = -1;
+    let activeTokoIdx = -1;
 
     const rootEl = document.documentElement;
     const themeToggleBtn = document.getElementById("themeToggleBtn");
     const metaThemeColor = document.getElementById("metaThemeColor");
     const form = document.getElementById("pengirimanForm");
+    const regionalInput = document.getElementById("regionalInput");
+    const regionalSuggestionsEl = document.getElementById("regionalSuggestions");
     const namaTokoInput = document.getElementById("namaToko");
     const tokoSuggestionsEl = document.getElementById("tokoSuggestions");
+    const tokoSjPanelEl = document.getElementById("tokoSjPanel");
+    const tokoSjCountEl = document.getElementById("tokoSjCount");
+    const tokoSjListEl = document.getElementById("tokoSjList");
     const jumlahKoliInput = document.getElementById("jumlahKoli");
     const editIndexInput = document.getElementById("editIndex");
     const editIdInput = document.getElementById("editId");
@@ -543,80 +684,368 @@
       e.preventDefault();
     }, { passive: false });
 
-    function getMatchingToko(query) {
-      const q = String(query || "").trim().toLowerCase();
-      if (!q) return daftarToko.slice(0, 25);
-      return daftarToko.filter((nama) => nama.toLowerCase().includes(q)).slice(0, 25);
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str ?? "";
+      return div.innerHTML;
+    }
+
+    function splitCommaList(raw) {
+      return String(raw || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    function formatStackHtml(rawText) {
+      const items = splitCommaList(rawText);
+      if (items.length === 0) return "-";
+      return `<div class="line-stack">${items
+        .map((line) => `<div class="line-item">${escapeHtml(line)}</div>`)
+        .join("")}</div>`;
+    }
+
+    function formatMultilineText(rawText) {
+      const items = splitCommaList(rawText);
+      return items.length > 0 ? items.join("\n") : "";
+    }
+
+    function getTokoForRegional(regionalName) {
+      const key = String(regionalName || "").trim().toLowerCase();
+      if (!key) return [];
+      if (Array.isArray(tokoByRegional[key])) {
+        return tokoByRegional[key];
+      }
+      const matchedKey = Object.keys(tokoByRegional).find(
+        (k) => k.includes(key) || key.includes(k)
+      );
+      return matchedKey && Array.isArray(tokoByRegional[matchedKey])
+        ? tokoByRegional[matchedKey]
+        : [];
+    }
+
+    function updateTokoPlaceholder() {
+      const hasReg = String(regionalInput.value || "").trim().length > 0;
+      if (!hasReg) {
+        namaTokoInput.placeholder = "Pilih regional dulu...";
+      } else if (selectedTokoEntries.length > 0) {
+        namaTokoInput.placeholder = "Tambah toko lain di regional ini...";
+      } else {
+        namaTokoInput.placeholder = "Klik / ketik pilih toko...";
+      }
+    }
+
+    function renderTokoSjRows() {
+      tokoSjCountEl.textContent = `${selectedTokoEntries.length} toko`;
+
+      if (selectedTokoEntries.length === 0) {
+        tokoSjPanelEl.classList.remove("open");
+        tokoSjListEl.innerHTML = "";
+        return;
+      }
+
+      tokoSjPanelEl.classList.add("open");
+      tokoSjListEl.innerHTML = selectedTokoEntries
+        .map((entry, idx) => `
+          <div class="toko-sj-row" data-idx="${idx}">
+            <span class="toko-sj-name">${escapeHtml(entry.toko)}</span>
+            <input
+              type="text"
+              class="sj-per-toko-input"
+              placeholder="No surat jalan untuk ${escapeHtml(entry.toko)}"
+              value="${escapeHtml(entry.suratJalan)}"
+              data-idx="${idx}"
+              required
+            />
+            <button
+              type="button"
+              class="btn-remove-toko"
+              title="Hapus toko"
+              aria-label="Hapus ${escapeHtml(entry.toko)}"
+              data-idx="${idx}"
+            >×</button>
+          </div>
+        `)
+        .join("");
+
+      tokoSjListEl.querySelectorAll(".sj-per-toko-input").forEach((inp) => {
+        inp.addEventListener("input", function () {
+          const idx = Number(inp.getAttribute("data-idx"));
+          if (selectedTokoEntries[idx]) {
+            selectedTokoEntries[idx].suratJalan = inp.value;
+          }
+        });
+      });
+
+      tokoSjListEl.querySelectorAll(".btn-remove-toko").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          const idx = Number(btn.getAttribute("data-idx"));
+          selectedTokoEntries.splice(idx, 1);
+          renderTokoSjRows();
+          updateTokoPlaceholder();
+          if (tokoSuggestionsEl.classList.contains("open")) {
+            renderTokoSuggestions();
+          }
+        });
+      });
+    }
+
+    function toggleTokoSelection(nama) {
+      const clean = String(nama || "").trim();
+      if (!clean) return;
+      const existingIdx = selectedTokoEntries.findIndex(
+        (e) => e.toko.toLowerCase() === clean.toLowerCase()
+      );
+      if (existingIdx >= 0) {
+        selectedTokoEntries.splice(existingIdx, 1);
+      } else {
+        selectedTokoEntries.push({ toko: clean, suratJalan: "" });
+      }
+      namaTokoInput.value = "";
+      renderTokoSjRows();
+      updateTokoPlaceholder();
+      renderTokoSuggestions();
+
+      if (existingIdx < 0) {
+        const latestSjInput = tokoSjListEl.querySelector(
+          `.sj-per-toko-input[data-idx="${selectedTokoEntries.length - 1}"]`
+        );
+        if (latestSjInput) {
+          closeTokoSuggestions();
+          latestSjInput.focus();
+          return;
+        }
+      }
+      namaTokoInput.focus();
+    }
+
+    function addManualTokoFromInput() {
+      const raw = namaTokoInput.value.trim();
+      if (!raw) return;
+      const parts = splitCommaList(raw);
+      let added = false;
+      parts.forEach((p) => {
+        if (!selectedTokoEntries.some((e) => e.toko.toLowerCase() === p.toLowerCase())) {
+          selectedTokoEntries.push({ toko: p, suratJalan: "" });
+          added = true;
+        }
+      });
+      namaTokoInput.value = "";
+      renderTokoSjRows();
+      updateTokoPlaceholder();
+      renderTokoSuggestions();
+      if (added) {
+        const latestSjInput = tokoSjListEl.querySelector(
+          `.sj-per-toko-input[data-idx="${selectedTokoEntries.length - 1}"]`
+        );
+        if (latestSjInput) {
+          closeTokoSuggestions();
+          latestSjInput.focus();
+        }
+      }
+    }
+
+    function closeRegionalSuggestions() {
+      activeRegionalIdx = -1;
+      regionalSuggestionsEl.classList.remove("open");
+      regionalSuggestionsEl.innerHTML = "";
     }
 
     function closeTokoSuggestions() {
-      activeSuggestionIdx = -1;
+      activeTokoIdx = -1;
       tokoSuggestionsEl.classList.remove("open");
       tokoSuggestionsEl.innerHTML = "";
     }
 
-    function selectToko(nama) {
-      namaTokoInput.value = nama;
-      closeTokoSuggestions();
+    function selectRegional(nama) {
+      const prevKey = regionalInput.value.trim().toLowerCase();
+      const nextKey = String(nama || "").trim().toLowerCase();
+      regionalInput.value = nama;
+      if (prevKey !== nextKey) {
+        selectedTokoEntries = [];
+        namaTokoInput.value = "";
+        renderTokoSjRows();
+      }
+      updateTokoPlaceholder();
+      closeRegionalSuggestions();
+      namaTokoInput.focus();
+      renderTokoSuggestions();
     }
 
-    function renderTokoSuggestions() {
-      const matches = getMatchingToko(namaTokoInput.value);
-      activeSuggestionIdx = -1;
+    function getMatchingRegional(query) {
+      const q = String(query || "").trim().toLowerCase();
+      if (!q) return regionalList.slice(0, 30);
+      return regionalList.filter((nama) => nama.toLowerCase().includes(q)).slice(0, 30);
+    }
 
-      if (daftarToko.length === 0) {
-        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Belum ada data di sheet "daftar toko". Ketik manual tetap bisa.</div>`;
-        tokoSuggestionsEl.classList.add("open");
+    function renderRegionalSuggestions() {
+      const matches = getMatchingRegional(regionalInput.value);
+      activeRegionalIdx = -1;
+
+      if (regionalList.length === 0) {
+        regionalSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Belum ada regional di sheet "daftar toko" kolom A. Ketik manual tetap bisa.</div>`;
+        regionalSuggestionsEl.classList.add("open");
         return;
       }
 
       if (matches.length === 0) {
-        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Tidak cocok di daftar toko. Tetap bisa pakai ketikan manual.</div>`;
+        regionalSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Regional tidak ditemukan. Tetap bisa pakai ketikan manual.</div>`;
+        regionalSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      regionalSuggestionsEl.innerHTML = matches
+        .map((nama, idx) => `<div class="autocomplete-item" role="option" data-idx="${idx}" data-value="${escapeHtml(nama)}">${escapeHtml(nama)}</div>`)
+        .join("");
+
+      regionalSuggestionsEl.querySelectorAll(".autocomplete-item").forEach((el) => {
+        el.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          selectRegional(el.getAttribute("data-value") || "");
+        });
+      });
+
+      regionalSuggestionsEl.classList.add("open");
+    }
+
+    function getMatchingToko(query) {
+      const regToko = getTokoForRegional(regionalInput.value);
+      const q = String(query || "").trim().toLowerCase();
+      if (!q) return regToko.slice(0, 40);
+      return regToko.filter((nama) => nama.toLowerCase().includes(q)).slice(0, 40);
+    }
+
+    function renderTokoSuggestions() {
+      const regVal = String(regionalInput.value || "").trim();
+      activeTokoIdx = -1;
+
+      if (!regVal) {
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Pilih atau ketik Regional terlebih dahulu.</div>`;
+        tokoSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      const regToko = getTokoForRegional(regVal);
+      if (regToko.length === 0) {
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Belum ada toko terdaftar di "${escapeHtml(regVal)}". Ketik nama toko lalu tekan Enter.</div>`;
+        tokoSuggestionsEl.classList.add("open");
+        return;
+      }
+
+      const matches = getMatchingToko(namaTokoInput.value);
+      if (matches.length === 0) {
+        tokoSuggestionsEl.innerHTML = `<div class="autocomplete-empty">Tidak cocok di daftar. Tekan Enter untuk menambahkan sebagai toko manual.</div>`;
         tokoSuggestionsEl.classList.add("open");
         return;
       }
 
       tokoSuggestionsEl.innerHTML = matches
-        .map((nama, idx) => `<div class="autocomplete-item" role="option" data-idx="${idx}" data-value="${escapeHtml(nama)}">${escapeHtml(nama)}</div>`)
+        .map((nama, idx) => {
+          const isPicked = selectedTokoEntries.some(
+            (e) => e.toko.toLowerCase() === nama.toLowerCase()
+          );
+          return `
+            <div class="autocomplete-item ${isPicked ? "picked" : ""}" role="option" data-idx="${idx}" data-value="${escapeHtml(nama)}">
+              <span>${escapeHtml(nama)}</span>
+              <span>${isPicked ? "✓" : "+"}</span>
+            </div>
+          `;
+        })
         .join("");
 
       tokoSuggestionsEl.querySelectorAll(".autocomplete-item").forEach((el) => {
         el.addEventListener("mousedown", function (e) {
           e.preventDefault();
-          selectToko(el.getAttribute("data-value") || "");
+          toggleTokoSelection(el.getAttribute("data-value") || "");
         });
       });
 
       tokoSuggestionsEl.classList.add("open");
     }
 
-    namaTokoInput.addEventListener("input", renderTokoSuggestions);
-    namaTokoInput.addEventListener("focus", renderTokoSuggestions);
+    regionalInput.addEventListener("input", function () {
+      updateTokoPlaceholder();
+      renderRegionalSuggestions();
+    });
 
-    namaTokoInput.addEventListener("keydown", function (e) {
-      if (!tokoSuggestionsEl.classList.contains("open")) return;
-      const items = tokoSuggestionsEl.querySelectorAll(".autocomplete-item");
+    regionalInput.addEventListener("focus", function () {
+      closeTokoSuggestions();
+      renderRegionalSuggestions();
+    });
+
+    regionalInput.addEventListener("keydown", function (e) {
+      if (!regionalSuggestionsEl.classList.contains("open")) return;
+      const items = regionalSuggestionsEl.querySelectorAll(".autocomplete-item");
       if (!items.length) return;
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        activeSuggestionIdx = (activeSuggestionIdx + 1) % items.length;
-        items.forEach((el, i) => el.classList.toggle("active", i === activeSuggestionIdx));
-        items[activeSuggestionIdx].scrollIntoView({ block: "nearest" });
+        activeRegionalIdx = (activeRegionalIdx + 1) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === activeRegionalIdx));
+        items[activeRegionalIdx].scrollIntoView({ block: "nearest" });
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        activeSuggestionIdx = (activeSuggestionIdx - 1 + items.length) % items.length;
-        items.forEach((el, i) => el.classList.toggle("active", i === activeSuggestionIdx));
-        items[activeSuggestionIdx].scrollIntoView({ block: "nearest" });
-      } else if (e.key === "Enter" && activeSuggestionIdx >= 0) {
+        activeRegionalIdx = (activeRegionalIdx - 1 + items.length) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === activeRegionalIdx));
+        items[activeRegionalIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter" && activeRegionalIdx >= 0) {
         e.preventDefault();
-        selectToko(items[activeSuggestionIdx].getAttribute("data-value") || "");
+        selectRegional(items[activeRegionalIdx].getAttribute("data-value") || "");
+      } else if (e.key === "Escape") {
+        closeRegionalSuggestions();
+      }
+    });
+
+    namaTokoInput.addEventListener("input", function () {
+      if (namaTokoInput.value.includes(",")) {
+        addManualTokoFromInput();
+        return;
+      }
+      renderTokoSuggestions();
+    });
+
+    namaTokoInput.addEventListener("focus", function () {
+      closeRegionalSuggestions();
+      renderTokoSuggestions();
+    });
+
+    namaTokoInput.addEventListener("click", function () {
+      closeRegionalSuggestions();
+      renderTokoSuggestions();
+    });
+
+    namaTokoInput.addEventListener("keydown", function (e) {
+      const items = tokoSuggestionsEl.classList.contains("open")
+        ? tokoSuggestionsEl.querySelectorAll(".autocomplete-item")
+        : [];
+
+      if (e.key === "ArrowDown" && items.length) {
+        e.preventDefault();
+        activeTokoIdx = (activeTokoIdx + 1) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === activeTokoIdx));
+        items[activeTokoIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "ArrowUp" && items.length) {
+        e.preventDefault();
+        activeTokoIdx = (activeTokoIdx - 1 + items.length) % items.length;
+        items.forEach((el, i) => el.classList.toggle("active", i === activeTokoIdx));
+        items[activeTokoIdx].scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter") {
+        if (activeTokoIdx >= 0 && items[activeTokoIdx]) {
+          e.preventDefault();
+          toggleTokoSelection(items[activeTokoIdx].getAttribute("data-value") || "");
+        } else if (namaTokoInput.value.trim()) {
+          e.preventDefault();
+          addManualTokoFromInput();
+        }
       } else if (e.key === "Escape") {
         closeTokoSuggestions();
       }
     });
 
     document.addEventListener("click", function (e) {
+      if (!e.target.closest("#regionalInput") && !e.target.closest("#regionalSuggestions")) {
+        closeRegionalSuggestions();
+      }
       if (!e.target.closest("#namaToko") && !e.target.closest("#tokoSuggestions")) {
         closeTokoSuggestions();
       }
@@ -686,7 +1115,8 @@
 
     function persist() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-      localStorage.setItem(TOKO_CACHE_KEY, JSON.stringify(daftarToko));
+      localStorage.setItem(REGIONAL_CACHE_KEY, JSON.stringify(regionalList));
+      localStorage.setItem(TOKO_BY_REGIONAL_CACHE_KEY, JSON.stringify(tokoByRegional));
     }
 
     function formatTanggal(iso) {
@@ -706,12 +1136,6 @@
       return str;
     }
 
-    function escapeHtml(str) {
-      const div = document.createElement("div");
-      div.textContent = str ?? "";
-      return div.innerHTML;
-    }
-
     function getFilteredRecords() {
       const q = searchInput.value.trim().toLowerCase();
       if (!q) {
@@ -720,7 +1144,7 @@
       return records
         .map((item, idx) => ({ item, realIndex: idx }))
         .filter(({ item }) =>
-          [item.namaToko, item.noSuratJalan, item.noResi, item.tanggalPengiriman]
+          [item.regional, item.namaToko, item.noSuratJalan, item.noResi, item.tanggalPengiriman]
             .some((val) => String(val || "").toLowerCase().includes(q))
         );
     }
@@ -731,7 +1155,7 @@
       if (filtered.length === 0) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="7" class="empty">
+            <td colspan="8" class="empty">
               ${records.length === 0 ? "Belum ada data pengiriman." : "Data tidak cocok dengan pencarian."}
             </td>
           </tr>
@@ -750,9 +1174,10 @@
           return `
             <tr>
               <td>${i + 1}</td>
-              <td>${escapeHtml(item.namaToko)}</td>
+              <td>${escapeHtml(item.regional)}</td>
+              <td class="toko-col">${formatStackHtml(item.namaToko)}</td>
+              <td class="sj-col">${formatStackHtml(item.noSuratJalan)}</td>
               <td>${formatTanggal(item.tanggalPengiriman)}</td>
-              <td>${escapeHtml(item.noSuratJalan)}</td>
               <td>${koli}</td>
               <td>${escapeHtml(item.noResi)}</td>
               <td>
@@ -775,12 +1200,16 @@
       editIdInput.value = "";
       submitBtn.textContent = "+ Simpan";
       cancelEditBtn.style.display = "none";
+      regionalInput.value = "";
+      selectedTokoEntries = [];
       namaTokoInput.value = "";
-      document.getElementById("noSuratJalan").value = "";
+      renderTokoSjRows();
       jumlahKoliInput.value = "";
       document.getElementById("noResi").value = "";
+      updateTokoPlaceholder();
+      closeRegionalSuggestions();
       closeTokoSuggestions();
-      namaTokoInput.focus();
+      regionalInput.focus();
     }
 
     async function muatDariSheets() {
@@ -799,14 +1228,18 @@
         records = (Array.isArray(json.data) ? json.data : []).map((row) => ({
           ...row,
           id: row.id || createId(),
+          regional: row.regional || "",
           jumlahKoli: Number(row.jumlahKoli) || 0,
         }));
-        if (Array.isArray(json.toko)) {
-          daftarToko = json.toko;
+        if (Array.isArray(json.regionalList)) {
+          regionalList = json.regionalList;
+        }
+        if (json.tokoByRegional && typeof json.tokoByRegional === "object") {
+          tokoByRegional = json.tokoByRegional;
         }
         persist();
         render();
-        setSyncStatus(`Tersinkron (${daftarToko.length} toko)`, "ok");
+        setSyncStatus(`Tersinkron (${regionalList.length} regional)`, "ok");
       } catch (err) {
         console.error(err);
         setSyncStatus("Gagal sinkron (pakai cache lokal)", "err");
@@ -836,13 +1269,24 @@
       if (!item) return;
       editIndexInput.value = String(index);
       editIdInput.value = item.id || "";
-      namaTokoInput.value = item.namaToko;
+      regionalInput.value = item.regional || "";
+
+      const tokos = splitCommaList(item.namaToko);
+      const sjs = splitCommaList(item.noSuratJalan);
+      selectedTokoEntries = tokos.map((toko, idx) => ({
+        toko,
+        suratJalan: sjs[idx] || (sjs.length === 1 ? sjs[0] : "") || "",
+      }));
+
+      namaTokoInput.value = "";
+      renderTokoSjRows();
       document.getElementById("tanggalPengiriman").value = item.tanggalPengiriman;
-      document.getElementById("noSuratJalan").value = item.noSuratJalan;
       jumlahKoliInput.value = item.jumlahKoli;
       document.getElementById("noResi").value = item.noResi;
       submitBtn.textContent = "Update";
       cancelEditBtn.style.display = "";
+      updateTokoPlaceholder();
+      closeRegionalSuggestions();
       closeTokoSuggestions();
       window.scrollTo({ top: 0, behavior: "smooth" });
     };
@@ -881,14 +1325,44 @@
       e.preventDefault();
       if (isBusy) return;
 
+      if (namaTokoInput.value.trim()) {
+        addManualTokoFromInput();
+      }
+
+      if (selectedTokoEntries.length === 0) {
+        alert("Pilih atau isi minimal satu Nama Toko terlebih dahulu.");
+        namaTokoInput.focus();
+        return;
+      }
+
+      // Sinkronkan nilai terbaru dari input No Surat Jalan per toko
+      tokoSjListEl.querySelectorAll(".sj-per-toko-input").forEach((inp) => {
+        const idx = Number(inp.getAttribute("data-idx"));
+        if (selectedTokoEntries[idx]) {
+          selectedTokoEntries[idx].suratJalan = inp.value.trim();
+        }
+      });
+
+      const missingSjIdx = selectedTokoEntries.findIndex((e) => !String(e.suratJalan || "").trim());
+      if (missingSjIdx >= 0) {
+        alert(`Isi No Surat Jalan untuk toko "${selectedTokoEntries[missingSjIdx].toko}".`);
+        const targetInp = tokoSjListEl.querySelector(`.sj-per-toko-input[data-idx="${missingSjIdx}"]`);
+        if (targetInp) targetInp.focus();
+        return;
+      }
+
+      const finalToko = selectedTokoEntries.map((e) => e.toko.trim()).join(", ");
+      const finalSuratJalan = selectedTokoEntries.map((e) => e.suratJalan.trim()).join(", ");
+
       const editIdx = editIndexInput.value;
       const existingId = editIdInput.value || createId();
 
       const entry = {
         id: existingId,
-        namaToko: namaTokoInput.value.trim(),
+        regional: regionalInput.value.trim(),
+        namaToko: finalToko,
+        noSuratJalan: finalSuratJalan,
         tanggalPengiriman: document.getElementById("tanggalPengiriman").value,
-        noSuratJalan: document.getElementById("noSuratJalan").value.trim(),
         jumlahKoli: parseInt(jumlahKoliInput.value, 10) || 0,
         noResi: document.getElementById("noResi").value.trim(),
       };
@@ -984,9 +1458,8 @@
           throw new Error("Sheet 'Rekap Pengiriman' tidak ditemukan di template");
         }
 
-        // Gaya baris dari template: baris 2 (tanpa garis atas) dan baris 3
-        // (border tipis penuh) dipakai bergantian sesuai posisi data.
-        const COLUMN_COUNT = 7; // No, Regional, Nama Toko, Tanggal, Surat Jalan, Koli, Resi
+        // Urutan kolom form: No | Regional | Nama Toko | Tanggal | Surat Jalan | Koli | Resi
+        const COLUMN_COUNT = 7;
         const firstStyles = [];
         const bodyStyles = [];
         for (let c = 1; c <= COLUMN_COUNT; c++) {
@@ -1008,17 +1481,36 @@
           for (let c = 1; c <= COLUMN_COUNT; c++) {
             row.getCell(c).style = cloneStyle(styles[c - 1]);
           }
+
+          const namaToko = formatMultilineText(item.namaToko);
+          const noSuratJalan = formatMultilineText(item.noSuratJalan);
+          const lineCount = Math.max(
+            1,
+            splitCommaList(item.namaToko).length,
+            splitCommaList(item.noSuratJalan).length
+          );
+
           row.getCell(1).value = i + 1;
-          row.getCell(2).value = String(item.regional ?? item.wilayah ?? "");
-          row.getCell(3).value = String(item.namaToko ?? "");
+          row.getCell(2).value = String(item.regional ?? "");
+          row.getCell(3).value = namaToko;
           row.getCell(4).value = formatTanggal(item.tanggalPengiriman);
-          row.getCell(5).value = String(item.noSuratJalan ?? "");
+          row.getCell(5).value = noSuratJalan;
           row.getCell(6).value = Number(item.jumlahKoli) || 0;
           row.getCell(7).value = String(item.noResi ?? "");
+
+          // Nama toko & no surat jalan bisa berisi beberapa baris.
+          row.getCell(3).alignment = Object.assign({}, row.getCell(3).alignment, {
+            wrapText: true,
+            vertical: "top",
+          });
+          row.getCell(5).alignment = Object.assign({}, row.getCell(5).alignment, {
+            wrapText: true,
+            vertical: "top",
+          });
           // No surat jalan & no resi selalu teks (jangan jadi notasi ilmiah).
           row.getCell(5).numFmt = "@";
           row.getCell(7).numFmt = "@";
-          row.height = 15.75;
+          row.height = Math.max(15.75, lineCount * 15);
         });
 
         // Batasi area cetak ke baris yang berisi data.
@@ -1066,43 +1558,48 @@
         totalKoli += koli;
         return [
           String(idx + 1),
-          String(item.namaToko ?? ""),
+          String(item.regional ?? ""),
+          formatMultilineText(item.namaToko),
+          formatMultilineText(item.noSuratJalan),
           formatTanggal(item.tanggalPengiriman),
-          String(item.noSuratJalan ?? ""),
           String(koli),
           String(item.noResi ?? ""),
         ];
       });
 
       const totalRowIndex = body.length;
-      body.push(["", "", "", "Total Koli", String(totalKoli), ""]);
+      body.push(["", "", "", "", "Total Koli", String(totalKoli), ""]);
 
       doc.autoTable({
         startY: 26,
-        head: [["No", "Nama Toko", "Tanggal Pengiriman", "No Surat Jalan", "Jumlah Koli", "No Resi"]],
+        head: [["No", "Regional", "Nama Toko", "No Surat Jalan", "Tanggal Pengiriman", "Jumlah Koli", "No Resi"]],
         body,
         styles: {
           fontSize: 9,
           cellPadding: 3,
           textColor: [15, 23, 42],
+          valign: "top",
         },
         headStyles: {
           fillColor: [15, 118, 110],
           textColor: [255, 255, 255],
           fontStyle: "bold",
+          valign: "middle",
         },
         columnStyles: {
-          0: { halign: "center", cellWidth: 14 },
-          1: { cellWidth: "auto" },
-          2: { halign: "center", cellWidth: 36 },
+          0: { halign: "center", cellWidth: 12 },
+          1: { cellWidth: 32 },
+          2: { cellWidth: "auto" },
           3: { cellWidth: 42 },
-          4: { halign: "right", cellWidth: 28 },
-          5: { cellWidth: 52 },
+          4: { halign: "center", cellWidth: 30 },
+          5: { halign: "right", cellWidth: 22 },
+          6: { cellWidth: 42 },
         },
         didParseCell: function (data) {
           if (data.section === "body" && data.row.index === totalRowIndex) {
             data.cell.styles.fontStyle = "bold";
             data.cell.styles.fillColor = [241, 245, 249];
+            data.cell.styles.valign = "middle";
           }
         },
       });
@@ -1110,6 +1607,7 @@
       doc.save(`rekap-pengiriman-${today}.pdf`);
     });
 
+    updateTokoPlaceholder();
     render();
     muatDariSheets();
   </script>
