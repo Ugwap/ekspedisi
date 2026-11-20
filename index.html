@@ -6,7 +6,7 @@
   <meta name="theme-color" id="metaThemeColor" content="#0f766e" />
   <link rel="manifest" href="manifest.json" />
   <title>Rekap Pengiriman Barang</title>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
@@ -941,68 +941,102 @@
       }
     });
 
-    document.getElementById("exportExcelBtn").addEventListener("click", function () {
+    function cloneStyle(style) {
+      return style ? JSON.parse(JSON.stringify(style)) : {};
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // Export memakai template.xlsx supaya bentuk, lebar kolom, border, dan
+    // setelan cetak sama persis dengan form rekap pengiriman.
+    document.getElementById("exportExcelBtn").addEventListener("click", async function () {
       const filtered = getFilteredRecords();
       if (filtered.length === 0) {
         alert("Tidak ada data untuk di-export.");
         return;
       }
 
-      const headers = [
-        "No",
-        "Nama Toko",
-        "Tanggal Pengiriman",
-        "No Surat Jalan",
-        "Jumlah Koli",
-        "No Resi",
-      ];
+      const btn = this;
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Menyiapkan...";
 
-      let totalKoli = 0;
-      const dataRows = filtered.map(({ item }, idx) => {
-        const koli = Number(item.jumlahKoli) || 0;
-        totalKoli += koli;
-        return [
-          idx + 1,
-          String(item.namaToko ?? ""),
-          formatTanggal(item.tanggalPengiriman),
-          String(item.noSuratJalan ?? ""),
-          koli,
-          String(item.noResi ?? ""),
-        ];
-      });
-
-      const totalRow = ["", "", "", "Total Koli", totalKoli, ""];
-      const aoa = [headers, ...dataRows, totalRow];
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-      const totalDataRows = dataRows.length;
-      for (let r = 1; r <= totalDataRows; r++) {
-        const sjCell = ws[XLSX.utils.encode_cell({ r, c: 3 })];
-        if (sjCell) {
-          sjCell.t = "s";
-          sjCell.z = "@";
+      try {
+        const res = await fetch("template.xlsx", { cache: "no-store" });
+        if (!res.ok) {
+          throw new Error("template.xlsx tidak bisa dimuat (" + res.status + ")");
         }
-        const resiCell = ws[XLSX.utils.encode_cell({ r, c: 5 })];
-        if (resiCell) {
-          resiCell.t = "s";
-          resiCell.z = "@";
+
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.load(await res.arrayBuffer());
+
+        const ws = wb.getWorksheet("Rekap Pengiriman") || wb.worksheets[0];
+        if (!ws) {
+          throw new Error("Sheet 'Rekap Pengiriman' tidak ditemukan di template");
         }
+
+        // Gaya baris dari template: baris 2 (tanpa garis atas) dan baris 3
+        // (border tipis penuh) dipakai bergantian sesuai posisi data.
+        const firstStyles = [];
+        const bodyStyles = [];
+        for (let c = 1; c <= 6; c++) {
+          firstStyles.push(cloneStyle(ws.getRow(2).getCell(c).style));
+          bodyStyles.push(cloneStyle(ws.getRow(3).getCell(c).style));
+        }
+
+        // Bersihkan isi baris data lama di template.
+        for (let r = 2; r <= ws.rowCount; r++) {
+          for (let c = 1; c <= 6; c++) {
+            ws.getRow(r).getCell(c).value = null;
+          }
+        }
+
+        filtered.forEach(({ item }, i) => {
+          const r = i + 2;
+          const row = ws.getRow(r);
+          const styles = i === 0 ? firstStyles : bodyStyles;
+          for (let c = 1; c <= 6; c++) {
+            row.getCell(c).style = cloneStyle(styles[c - 1]);
+          }
+          row.getCell(1).value = i + 1;
+          row.getCell(2).value = String(item.namaToko ?? "");
+          row.getCell(3).value = formatTanggal(item.tanggalPengiriman);
+          row.getCell(4).value = String(item.noSuratJalan ?? "");
+          row.getCell(5).value = Number(item.jumlahKoli) || 0;
+          row.getCell(6).value = String(item.noResi ?? "");
+          // No surat jalan & no resi selalu teks (jangan jadi notasi ilmiah).
+          row.getCell(4).numFmt = "@";
+          row.getCell(6).numFmt = "@";
+          row.height = 15.75;
+        });
+
+        // Batasi area cetak ke baris yang berisi data.
+        ws.pageSetup.printArea = `A1:F${filtered.length + 1}`;
+
+        const buf = await wb.xlsx.writeBuffer();
+        const today = new Date().toISOString().slice(0, 10);
+        downloadBlob(
+          new Blob([buf], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }),
+          `rekap-pengiriman-${today}.xlsx`
+        );
+      } catch (err) {
+        console.error(err);
+        alert("Gagal membuat file Excel: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
       }
-
-      ws["!cols"] = [
-        { wch: 6 },
-        { wch: 28 },
-        { wch: 20 },
-        { wch: 20 },
-        { wch: 14 },
-        { wch: 24 },
-      ];
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Rekap Pengiriman");
-
-      const today = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, `rekap-pengiriman-${today}.xlsx`);
     });
 
     document.getElementById("exportPdfBtn").addEventListener("click", function () {
