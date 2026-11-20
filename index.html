@@ -585,6 +585,7 @@
         <div class="form-group form-actions">
           <button type="submit" class="btn-primary" id="submitBtn">+ Simpan</button>
           <button type="button" class="btn-cancel" id="cancelEditBtn" style="display: none;">Batal</button>
+          <button type="button" class="btn-danger" id="deleteEditBtn" style="display: none;">Hapus</button>
         </div>
       </form>
     </div>
@@ -673,6 +674,7 @@
     const editIdInput = document.getElementById("editId");
     const submitBtn = document.getElementById("submitBtn");
     const cancelEditBtn = document.getElementById("cancelEditBtn");
+    const deleteEditBtn = document.getElementById("deleteEditBtn");
     const refreshBtn = document.getElementById("refreshBtn");
     const clearAllBtn = document.getElementById("clearAllBtn");
     const searchInput = document.getElementById("searchInput");
@@ -1066,6 +1068,7 @@
       document.querySelectorAll(".btn-edit, .btn-del").forEach((btn) => {
         btn.disabled = state;
       });
+      deleteEditBtn.disabled = state;
     }
 
     function isConfigured() {
@@ -1184,7 +1187,6 @@
               <td>${escapeHtml(item.noResi)}</td>
               <td>
                 <button type="button" class="btn-edit" onclick="mulaiEdit(${realIndex})">Edit</button>
-                <button type="button" class="btn-del" onclick="hapusData(${realIndex})">Hapus</button>
               </td>
             </tr>
           `;
@@ -1202,6 +1204,7 @@
       editIdInput.value = "";
       submitBtn.textContent = "+ Simpan";
       cancelEditBtn.style.display = "none";
+      deleteEditBtn.style.display = "none";
       regionalInput.value = "";
       selectedTokoEntries = [];
       namaTokoInput.value = "";
@@ -1287,6 +1290,7 @@
       document.getElementById("noResi").value = item.noResi;
       submitBtn.textContent = "Update";
       cancelEditBtn.style.display = "";
+      deleteEditBtn.style.display = "";
       updateTokoPlaceholder();
       closeRegionalSuggestions();
       closeTokoSuggestions();
@@ -1320,6 +1324,21 @@
     };
 
     cancelEditBtn.addEventListener("click", resetFormMode);
+
+    // Hapus hanya tersedia saat mode edit, supaya tidak gampang terhapus.
+    deleteEditBtn.addEventListener("click", async function () {
+      if (isBusy) return;
+      const idx = Number(editIndexInput.value);
+      const target = records[idx];
+      if (editIndexInput.value === "" || !target) return;
+
+      const label = [target.namaToko, target.regional]
+        .filter((v) => String(v || "").trim())
+        .join(" • ");
+      if (!confirm(`Hapus data ini?\n\n${label}`)) return;
+
+      await window.hapusData(idx);
+    });
     searchInput.addEventListener("input", render);
     refreshBtn.addEventListener("click", muatDariSheets);
 
