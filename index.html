@@ -451,7 +451,8 @@
     }
 
     td.toko-col,
-    td.sj-col {
+    td.sj-col,
+    td.ket-col {
       white-space: normal;
       min-width: 165px;
     }
@@ -574,6 +575,11 @@
           <input type="text" id="noResi" placeholder="Nomor resi" required />
         </div>
 
+        <div class="form-group">
+          <label for="keterangan">Keterangan</label>
+          <input type="text" id="keterangan" placeholder="Catatan / keterangan (opsional)" />
+        </div>
+
         <div class="toko-sj-panel" id="tokoSjPanel">
           <div class="toko-sj-header">
             <span>Daftar Toko &amp; No Surat Jalan per Toko</span>
@@ -601,7 +607,7 @@
           type="search"
           id="searchInput"
           class="search-box"
-          placeholder="Cari regional, nama toko, no surat jalan, atau no resi..."
+          placeholder="Cari regional, nama toko, no surat jalan, no resi, atau keterangan..."
         />
         <div class="btn-group">
           <button type="button" class="btn-sync" id="refreshBtn">↻ Sinkron</button>
@@ -622,19 +628,20 @@
               <th>Tanggal Pengiriman</th>
               <th>Jumlah Koli</th>
               <th>No Resi</th>
+              <th>Keterangan</th>
               <th>Aksi</th>
             </tr>
           </thead>
           <tbody id="tableBody">
             <tr>
-              <td colspan="8" class="empty">Belum ada data pengiriman.</td>
+              <td colspan="9" class="empty">Belum ada data pengiriman.</td>
             </tr>
           </tbody>
           <tfoot id="tableFoot" style="display: none;">
             <tr>
               <td colspan="5" style="text-align: right;">Total Koli</td>
               <td id="totalKoliCell">0</td>
-              <td colspan="2"></td>
+              <td colspan="3"></td>
             </tr>
           </tfoot>
         </table>
@@ -666,6 +673,7 @@
     const regionalSuggestionsEl = document.getElementById("regionalSuggestions");
     const namaTokoInput = document.getElementById("namaToko");
     const tokoSuggestionsEl = document.getElementById("tokoSuggestions");
+    const keteranganInput = document.getElementById("keterangan");
     const tokoSjPanelEl = document.getElementById("tokoSjPanel");
     const tokoSjCountEl = document.getElementById("tokoSjCount");
     const tokoSjListEl = document.getElementById("tokoSjList");
@@ -1149,8 +1157,14 @@
       return records
         .map((item, idx) => ({ item, realIndex: idx }))
         .filter(({ item }) =>
-          [item.regional, item.namaToko, item.noSuratJalan, item.noResi, item.tanggalPengiriman]
-            .some((val) => String(val || "").toLowerCase().includes(q))
+          [
+            item.regional,
+            item.namaToko,
+            item.noSuratJalan,
+            item.noResi,
+            item.tanggalPengiriman,
+            item.keterangan,
+          ].some((val) => String(val || "").toLowerCase().includes(q))
         );
     }
 
@@ -1160,7 +1174,7 @@
       if (filtered.length === 0) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="8" class="empty">
+            <td colspan="9" class="empty">
               ${records.length === 0 ? "Belum ada data pengiriman." : "Data tidak cocok dengan pencarian."}
             </td>
           </tr>
@@ -1176,6 +1190,7 @@
         .map(({ item, realIndex }, i) => {
           const koli = Number(item.jumlahKoli) || 0;
           totalKoli += koli;
+          const ketText = String(item.keterangan ?? "").trim();
           return `
             <tr>
               <td>${i + 1}</td>
@@ -1185,6 +1200,7 @@
               <td>${formatTanggal(item.tanggalPengiriman)}</td>
               <td>${koli}</td>
               <td>${escapeHtml(item.noResi)}</td>
+              <td class="ket-col">${ketText ? escapeHtml(ketText) : "-"}</td>
               <td>
                 <button type="button" class="btn-edit" onclick="mulaiEdit(${realIndex})">Edit</button>
               </td>
@@ -1211,6 +1227,7 @@
       renderTokoSjRows();
       jumlahKoliInput.value = "";
       document.getElementById("noResi").value = "";
+      keteranganInput.value = "";
       updateTokoPlaceholder();
       closeRegionalSuggestions();
       closeTokoSuggestions();
@@ -1235,6 +1252,7 @@
           id: row.id || createId(),
           regional: row.regional || "",
           jumlahKoli: Number(row.jumlahKoli) || 0,
+          keterangan: row.keterangan != null ? String(row.keterangan) : "",
         }));
         if (Array.isArray(json.regionalList)) {
           regionalList = json.regionalList;
@@ -1288,6 +1306,7 @@
       document.getElementById("tanggalPengiriman").value = item.tanggalPengiriman;
       jumlahKoliInput.value = item.jumlahKoli;
       document.getElementById("noResi").value = item.noResi;
+      keteranganInput.value = item.keterangan || "";
       submitBtn.textContent = "Update";
       cancelEditBtn.style.display = "";
       deleteEditBtn.style.display = "";
@@ -1386,6 +1405,7 @@
         tanggalPengiriman: document.getElementById("tanggalPengiriman").value,
         jumlahKoli: parseInt(jumlahKoliInput.value, 10) || 0,
         noResi: document.getElementById("noResi").value.trim(),
+        keterangan: keteranganInput.value.trim(),
       };
 
       setBusy(true);
@@ -1479,16 +1499,23 @@
           throw new Error("Sheet 'Rekap Pengiriman' tidak ditemukan di template");
         }
 
-        // Urutan kolom: No | Regional | Nama Toko | Surat Jalan | Tanggal | Koli | Resi
-        // (No Surat Jalan di sebelah Nama Toko, sama seperti tabel web & PDF)
-        const COLUMN_COUNT = 7;
-        ws.getRow(1).getCell(4).value = "No Surat Jalan";
-        ws.getRow(1).getCell(5).value = "Tanggal Pengiriman";
+        // Urutan kolom: No | Regional | Nama Toko | Surat Jalan | Tanggal | Koli | Resi | Keterangan
+        const COLUMN_COUNT = 8;
+        const headerRow = ws.getRow(1);
+        headerRow.getCell(4).value = "No Surat Jalan";
+        headerRow.getCell(5).value = "Tanggal Pengiriman";
+        headerRow.getCell(8).value = "Keterangan";
+        if (!headerRow.getCell(8).style || Object.keys(headerRow.getCell(8).style).length === 0) {
+          headerRow.getCell(8).style = cloneStyle(headerRow.getCell(7).style);
+        }
+
         const firstStyles = [];
         const bodyStyles = [];
         for (let c = 1; c <= COLUMN_COUNT; c++) {
-          firstStyles.push(cloneStyle(ws.getRow(2).getCell(c).style));
-          bodyStyles.push(cloneStyle(ws.getRow(3).getCell(c).style));
+          const srcFirst = c === 8 ? ws.getRow(2).getCell(7).style : ws.getRow(2).getCell(c).style;
+          const srcBody = c === 8 ? ws.getRow(3).getCell(7).style : ws.getRow(3).getCell(c).style;
+          firstStyles.push(cloneStyle(srcFirst));
+          bodyStyles.push(cloneStyle(srcBody));
         }
 
         // Bersihkan isi baris data lama di template.
@@ -1500,7 +1527,7 @@
 
         // Satu entri Nama Toko / No Surat Jalan = satu baris, jadi tidak
         // menumpuk di dalam satu sel. Kolom lain digabung (merge) per data.
-        const MERGED_COLUMNS = [1, 2, 5, 6, 7];
+        const MERGED_COLUMNS = [1, 2, 5, 6, 7, 8];
         let nextRow = 2;
 
         filtered.forEach(({ item }, i) => {
@@ -1535,6 +1562,7 @@
           firstRow.getCell(5).value = formatTanggal(item.tanggalPengiriman);
           firstRow.getCell(6).value = Number(item.jumlahKoli) || 0;
           firstRow.getCell(7).value = String(item.noResi ?? "");
+          firstRow.getCell(8).value = String(item.keterangan ?? "");
 
           if (lineCount > 1) {
             MERGED_COLUMNS.forEach((c) => {
@@ -1550,7 +1578,7 @@
         });
 
         // Batasi area cetak ke baris yang berisi data.
-        ws.pageSetup.printArea = `A1:G${nextRow - 1}`;
+        ws.pageSetup.printArea = `A1:H${nextRow - 1}`;
 
         const buf = await wb.xlsx.writeBuffer();
         const today = new Date().toISOString().slice(0, 10);
@@ -1600,15 +1628,16 @@
           formatTanggal(item.tanggalPengiriman),
           String(koli),
           String(item.noResi ?? ""),
+          String(item.keterangan ?? ""),
         ];
       });
 
       const totalRowIndex = body.length;
-      body.push(["", "", "", "", "Total Koli", String(totalKoli), ""]);
+      body.push(["", "", "", "", "Total Koli", String(totalKoli), "", ""]);
 
       doc.autoTable({
         startY: 26,
-        head: [["No", "Regional", "Nama Toko", "No Surat Jalan", "Tanggal Pengiriman", "Jumlah Koli", "No Resi"]],
+        head: [["No", "Regional", "Nama Toko", "No Surat Jalan", "Tanggal Pengiriman", "Jumlah Koli", "No Resi", "Keterangan"]],
         body,
         styles: {
           fontSize: 9,
@@ -1623,13 +1652,14 @@
           valign: "middle",
         },
         columnStyles: {
-          0: { halign: "center", cellWidth: 12 },
-          1: { cellWidth: 32 },
+          0: { halign: "center", cellWidth: 11 },
+          1: { cellWidth: 30 },
           2: { cellWidth: "auto" },
-          3: { cellWidth: 42 },
-          4: { halign: "center", cellWidth: 30 },
-          5: { halign: "right", cellWidth: 22 },
-          6: { cellWidth: 42 },
+          3: { cellWidth: 38 },
+          4: { halign: "center", cellWidth: 28 },
+          5: { halign: "right", cellWidth: 20 },
+          6: { cellWidth: 34 },
+          7: { cellWidth: 42 },
         },
         didParseCell: function (data) {
           if (data.section === "body" && data.row.index === totalRowIndex) {
